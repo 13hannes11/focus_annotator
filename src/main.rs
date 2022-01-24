@@ -38,20 +38,28 @@ fn main() {
             .margin_start(MARGIN_LEFT)
             .build();
 
+        let adjustment = Adjustment::builder()
+            .lower(0.0)
+            .upper(10.0)
+            .value(5.0)
+            .step_increment(1.0)
+            .build();
+
         let scale = Scale::builder()
             .orientation(Orientation::Vertical)
             .adjustment(&adjustment)
             .vexpand(true)
             .margin_top(MARGIN_TOP)
             .margin_bottom(MARGIN_BOTTOM)
-            .margin_start(MARGIN_LEFT)
+            .margin_start(MARGIN_LEFT / 2)
+            .margin_end(MARGIN_RIGHT / 2)
             .draw_value(true)
             .inverted(true)
             .round_digits(0)
             .digits(0)
-            //(|x| eprintln!("Changed! {:?}", x))
             .build();
 
+        let seperator = Separator::new(Orientation::Vertical);
         let content = Box::builder()
             //.hexpand(true)
             .orientation(Orientation::Horizontal)
@@ -59,6 +67,7 @@ fn main() {
             .build();
 
         content.append(&scale);
+        content.append(&seperator);
         content.append(&image);
 
         scale.connect_value_changed(move |x| {
