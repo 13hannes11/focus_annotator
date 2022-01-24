@@ -1,8 +1,13 @@
 use adw::prelude::*;
 use gtk::prelude::*;
 
-use adw::{ActionRow, ApplicationWindow, HeaderBar};
-use gtk::{Application, Box, ListBox, Orientation};
+use adw::{ApplicationWindow, HeaderBar};
+use gtk::{Adjustment, Application, Box, Image, Orientation, Scale};
+
+const MARGIN_TOP: i32 = 32;
+const MARGIN_BOTTOM: i32 = 32;
+const MARGIN_LEFT: i32 = 32;
+const MARGIN_RIGHT: i32 = 32;
 
 fn main() {
     let application = Application::builder()
@@ -14,42 +19,76 @@ fn main() {
     });
 
     application.connect_activate(|app| {
-        // ActionRows are only available in Adwaita
-        let row = ActionRow::builder()
-            .activatable(true)
-            .selectable(false)
-            .title("Click me")
+        let adjustment = Adjustment::builder()
+            .lower(0.0)
+            .upper(10.0)
+            .value(5.0)
+            .step_increment(1.0)
             .build();
-        row.connect_activated(|x| {
-            eprintln!("Clicked! {:?}", x);
+
+        let image = Image::builder()
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .vexpand(true)
+            .hexpand(true)
+            .margin_top(MARGIN_TOP)
+            .margin_end(MARGIN_RIGHT)
+            .margin_bottom(MARGIN_BOTTOM)
+            .margin_start(MARGIN_LEFT)
+            .build();
+
+        let scale = Scale::builder()
+            .orientation(Orientation::Vertical)
+            .adjustment(&adjustment)
+            .vexpand(true)
+            .margin_top(MARGIN_TOP)
+            .margin_bottom(MARGIN_BOTTOM)
+            .margin_start(MARGIN_LEFT)
+            .draw_value(true)
+            .inverted(true)
+            .round_digits(0)
+            .digits(0)
+            //(|x| eprintln!("Changed! {:?}", x))
+            .build();
+
+        let content = Box::builder()
+            //.hexpand(true)
+            .orientation(Orientation::Horizontal)
+            .spacing(0)
+            .build();
+
+        content.append(&scale);
+        content.append(&image);
+
+        scale.connect_value_changed(move |x| {
+            eprintln!("Changed value! {:?}", x.value());
+            let path = if x.value() > 6.0 {
+                "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg"
+            } else if x.value() > 3.0 {
+                "/var/home/hannes/Downloads/test/I12984_X022_Y029_Z5146.jpg"
+            } else {
+                "/var/home/hannes/Downloads/test/I12985_X022_Y029_Z5195.jpg"
+            };
+            image.set_from_file(Some(path));
         });
 
-        
-        let list = ListBox::builder()
-            .margin_top(32)
-            .margin_end(32)
-            .margin_bottom(32)
-            .margin_start(32)
-            // the content class makes the list look nicer
-            .css_classes(vec![String::from("content")])
+        //let show_start_title_buttons = Button::new();
+        let header_bar = HeaderBar::builder()
+            .title_widget(&adw::WindowTitle::new("First App", ""))
             .build();
-        list.append(&row);
 
         // Combine the content in a box
-        let content = Box::new(Orientation::Vertical, 0);
+        let title_widget_content = Box::new(Orientation::Vertical, 0);
         // Adwaitas' ApplicationWindow does not include a HeaderBar
-        content.append(
-            &HeaderBar::builder()
-                .title_widget(&adw::WindowTitle::new("First App", ""))
-                .build(),
-        );
-        content.append(&list);
+
+        title_widget_content.append(&header_bar);
+        title_widget_content.append(&content);
 
         let window = ApplicationWindow::builder()
             .application(app)
-            .default_width(350)
+            .default_width(800)
+            .default_height(600)
             // add content to window
-            .content(&content)
+            .content(&title_widget_content)
             .build();
         window.show();
     });
