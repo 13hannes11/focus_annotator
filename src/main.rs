@@ -1,6 +1,6 @@
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
 use gtk::{
-    prelude::*, ActionBar, Adjustment, Align, Application, AspectFrame, Box, Button, Grid, Image,
+    prelude::*, ActionBar, Adjustment, Application, AspectFrame, Box, Button, Grid, Image,
     Orientation, Scale, Separator, ToggleButton,
 };
 
@@ -8,6 +8,9 @@ const MARGIN_TOP: i32 = 32;
 const MARGIN_BOTTOM: i32 = 32;
 const MARGIN_LEFT: i32 = 32;
 const MARGIN_RIGHT: i32 = 32;
+
+const TOGGLE_NEIGHBOURS_TEXT_TOGGLED: &str = "Hide Neighbours";
+const TOGGLE_NEIGHBOURS_TEXT: &str = "Show Neighbours";
 
 fn main() {
     let application = Application::builder()
@@ -23,24 +26,28 @@ fn main() {
         // MAIN CONTENT //
         //////////////////
 
-        let focus_image = Image::builder()
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .vexpand(true)
-            .hexpand(true)
-            .build();
+        let focus_image = std::sync::Arc::new(
+            Image::builder()
+                .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                .vexpand(true)
+                .hexpand(true)
+                .build(),
+        );
 
-        let focus_neighbours_grid = Grid::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .column_spacing(0)
-            .row_spacing(0)
-            .build();
+        let focus_neighbours_grid = std::sync::Arc::new(
+            Grid::builder()
+                .vexpand(true)
+                .hexpand(true)
+                .column_spacing(0)
+                .row_spacing(0)
+                .build(),
+        );
         let focus_neighbours_aspect_frame = AspectFrame::builder()
-            .child(&focus_neighbours_grid)
             .ratio(1.0)
             .xalign(0.5)
             .yalign(0.5)
             .build();
+        focus_neighbours_aspect_frame.set_child(Some(focus_image.as_ref()));
 
         let neighbours_1 = Image::builder()
             .vexpand(true)
@@ -88,8 +95,6 @@ fn main() {
             .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
             .build();
 
-        //focus_neighbours_grid.add
-
         focus_neighbours_grid.attach(&neighbours_1, 0, 0, 1, 1);
         focus_neighbours_grid.attach(&neighbours_2, 1, 0, 1, 1);
         focus_neighbours_grid.attach(&neighbours_3, 2, 0, 1, 1);
@@ -107,19 +112,21 @@ fn main() {
             .step_increment(1.0)
             .build();
 
-        let focus_scale = Scale::builder()
-            .orientation(Orientation::Vertical)
-            .adjustment(&focus_scale_adjustment)
-            .vexpand(true)
-            .margin_top(MARGIN_TOP)
-            .margin_bottom(MARGIN_BOTTOM)
-            .margin_start(MARGIN_LEFT / 2)
-            .margin_end(MARGIN_RIGHT / 2)
-            .draw_value(true)
-            .inverted(true)
-            .round_digits(0)
-            .digits(0)
-            .build();
+        let focus_scale = std::sync::Arc::new(
+            Scale::builder()
+                .orientation(Orientation::Vertical)
+                .adjustment(&focus_scale_adjustment)
+                .vexpand(true)
+                .margin_top(MARGIN_TOP)
+                .margin_bottom(MARGIN_BOTTOM)
+                .margin_start(MARGIN_LEFT / 2)
+                .margin_end(MARGIN_RIGHT / 2)
+                .draw_value(true)
+                .inverted(true)
+                .round_digits(0)
+                .digits(0)
+                .build(),
+        );
 
         let center_content_seperator = Separator::new(Orientation::Vertical);
         let center_content = Box::builder()
@@ -128,11 +135,11 @@ fn main() {
             .spacing(0)
             .build();
 
-        center_content.append(&focus_scale);
+        center_content.append(focus_scale.as_ref());
         center_content.append(&center_content_seperator);
-        //center_content.append(&focus_image);
         center_content.append(&focus_neighbours_aspect_frame);
 
+        let focus_image_clone = focus_image.clone();
         focus_scale.connect_value_changed(move |x| {
             eprintln!("Changed value! {:?}", x.value());
             let path = if x.value() > 6.0 {
@@ -142,7 +149,7 @@ fn main() {
             } else {
                 "/var/home/hannes/Downloads/test/I12985_X022_Y029_Z5195.jpg"
             };
-            focus_image.set_from_file(Some(path));
+            focus_image_clone.as_ref().set_from_file(Some(path));
         });
 
         ////////////
@@ -176,8 +183,23 @@ fn main() {
         focus_skip_link_widget.append(&skip_button);
         focus_skip_link_widget.append(&focus_button);
 
-        let neighbour_toggle_button = ToggleButton::builder().label("Toggle Neighbours").build();
+        let neighbour_toggle_button = ToggleButton::builder()
+            .label(TOGGLE_NEIGHBOURS_TEXT)
+            .width_request(158)
+            .build();
 
+        let focus_image_clone = focus_image.clone();
+        let focus_neighbours_grid_clone = focus_neighbours_grid.clone();
+        neighbour_toggle_button.connect_toggled(move |x| match x.is_active() {
+            true => {
+                focus_neighbours_aspect_frame.set_child(Some(focus_neighbours_grid_clone.as_ref()));
+                x.set_label(TOGGLE_NEIGHBOURS_TEXT_TOGGLED);
+            }
+            false => {
+                focus_neighbours_aspect_frame.set_child(Some(focus_image_clone.as_ref()));
+                x.set_label(TOGGLE_NEIGHBOURS_TEXT);
+            }
+        });
         bottom_toolbar.pack_start(&neighbour_toggle_button);
         bottom_toolbar.pack_end(&focus_skip_link_widget);
 
