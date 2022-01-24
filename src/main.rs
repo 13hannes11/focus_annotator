@@ -9,10 +9,48 @@ const MARGIN_BOTTOM: i32 = 32;
 const MARGIN_LEFT: i32 = 32;
 const MARGIN_RIGHT: i32 = 32;
 
+const NONE_STRING_OPTION: Option<String> = None;
+
 const TOGGLE_NEIGHBOURS_TEXT_TOGGLED: &str = "Hide Neighbours";
 const TOGGLE_NEIGHBOURS_TEXT: &str = "Show Neighbours";
 
+#[derive(Debug, Clone)]
+struct AnnotationImage {
+    image_path: String,
+    neighbours: [Option<String>; 8],
+}
+
+impl AnnotationImage {
+    pub fn from_vec(image_path: String, neighbours: Vec<Option<String>>) -> Self {
+        let mut _neighbours = [NONE_STRING_OPTION; 8];
+        for (index, element) in (0..8).zip(neighbours.iter()) {
+            _neighbours[index] = element.clone();
+        }
+
+        AnnotationImage {
+            image_path,
+            neighbours: _neighbours,
+        }
+    }
+}
+
 fn main() {
+    let mut annotation_images = Vec::<AnnotationImage>::new();
+
+    annotation_images.push(AnnotationImage::from_vec(
+        "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string(),
+        vec![
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
+        ],
+    ));
+
     let application = Application::builder()
         .application_id("com.example.FirstAdwaitaApp")
         .build();
@@ -49,61 +87,84 @@ fn main() {
             .build();
         focus_neighbours_aspect_frame.set_child(Some(focus_image.as_ref()));
 
-        let neighbours_1 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_2 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_3 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_4 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_5 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_6 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_7 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_8 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
-        let neighbours_9 = Image::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-            .build();
+        let neighbours_image: [std::sync::Arc<Image>; 8] = [
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+            std::sync::Arc::new(
+                Image::builder()
+                    .vexpand(true)
+                    .hexpand(true)
+                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                    .build(),
+            ),
+        ];
 
-        focus_neighbours_grid.attach(&neighbours_1, 0, 0, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_2, 1, 0, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_3, 2, 0, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_4, 0, 1, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_5, 1, 1, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_6, 2, 1, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_7, 0, 2, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_8, 1, 2, 1, 1);
-        focus_neighbours_grid.attach(&neighbours_9, 2, 2, 1, 1);
+        let focus_image_center = std::sync::Arc::new(
+            Image::builder()
+                .vexpand(true)
+                .hexpand(true)
+                .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                .build(),
+        );
+        focus_neighbours_grid.attach(focus_image_center.as_ref(), 1, 1, 1, 1);
+
+        for index in 0..neighbours_image.len() {
+            // offset index for later images to leave out middle of the grid
+            let grid_index: i32 = if index > 3 { index + 1 } else { index }
+                .try_into()
+                .unwrap();
+            let column = grid_index % 3;
+            let row = grid_index / 3;
+            focus_neighbours_grid.attach(neighbours_image[index].as_ref(), column, row, 1, 1);
+            eprintln!("{column} {row}");
+        }
 
         let focus_scale_adjustment = Adjustment::builder()
             .lower(0.0)
