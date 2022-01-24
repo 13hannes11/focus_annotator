@@ -1,8 +1,10 @@
 use adw::prelude::*;
 use gtk::prelude::*;
 
-use adw::{ApplicationWindow, HeaderBar};
-use gtk::{Adjustment, Application, Box, Image, Orientation, Scale};
+use adw::{ApplicationWindow, HeaderBar, SplitButton};
+use gtk::{
+    ActionBar, Adjustment, Application, Box, Button, Image, Orientation, Scale, ToggleButton,
+};
 
 const MARGIN_TOP: i32 = 32;
 const MARGIN_BOTTOM: i32 = 32;
@@ -76,12 +78,35 @@ fn main() {
             .title_widget(&adw::WindowTitle::new("First App", ""))
             .build();
 
+        // TODO: add button functionality
+        let open_button = SplitButton::builder().label("Open").build();
+        header_bar.pack_start(&open_button);
+
         // Combine the content in a box
         let title_widget_content = Box::new(Orientation::Vertical, 0);
         // Adwaitas' ApplicationWindow does not include a HeaderBar
 
+        /*let bottom_toolbar_widget = Box::builder()
+        .orientation(Orientation::Horizontal)
+        .css_classes(vec!["toolbox".to_string()])
+        .halign(gtk::Align::End)
+        //.margin_top(MARGIN_TOP / 2)
+        .margin_bottom(MARGIN_BOTTOM / 2)
+        .build();*/
+
+        let bottom_toolbar_widget = ActionBar::builder().build();
+
+        // TODO: add functionality
+        let focus_button = Button::builder().label("Set Focus").build();
+
+        let neighbour_toggle_button = ToggleButton::builder().label("Toggle Neighbours").build();
+
+        bottom_toolbar_widget.pack_start(&neighbour_toggle_button);
+        bottom_toolbar_widget.pack_end(&focus_button);
+
         title_widget_content.append(&header_bar);
         title_widget_content.append(&content);
+        title_widget_content.append(&bottom_toolbar_widget);
 
         let window = ApplicationWindow::builder()
             .application(app)
