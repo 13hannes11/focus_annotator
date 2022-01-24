@@ -3,7 +3,8 @@ use gtk::prelude::*;
 
 use adw::{ApplicationWindow, HeaderBar, SplitButton};
 use gtk::{
-    ActionBar, Adjustment, Application, Box, Button, Image, Orientation, Scale, ToggleButton,
+    ActionBar, Adjustment, Application, Box, Button, Image, Orientation, Scale, Separator,
+    ToggleButton,
 };
 
 const MARGIN_TOP: i32 = 32;
@@ -21,14 +22,11 @@ fn main() {
     });
 
     application.connect_activate(|app| {
-        let adjustment = Adjustment::builder()
-            .lower(0.0)
-            .upper(10.0)
-            .value(5.0)
-            .step_increment(1.0)
-            .build();
+        //////////////////
+        // MAIN CONTENT //
+        //////////////////
 
-        let image = Image::builder()
+        let focus_image = Image::builder()
             .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
             .vexpand(true)
             .hexpand(true)
@@ -38,16 +36,16 @@ fn main() {
             .margin_start(MARGIN_LEFT)
             .build();
 
-        let adjustment = Adjustment::builder()
+        let focus_scale_adjustment = Adjustment::builder()
             .lower(0.0)
             .upper(10.0)
             .value(5.0)
             .step_increment(1.0)
             .build();
 
-        let scale = Scale::builder()
+        let focus_scale = Scale::builder()
             .orientation(Orientation::Vertical)
-            .adjustment(&adjustment)
+            .adjustment(&focus_scale_adjustment)
             .vexpand(true)
             .margin_top(MARGIN_TOP)
             .margin_bottom(MARGIN_BOTTOM)
@@ -59,18 +57,18 @@ fn main() {
             .digits(0)
             .build();
 
-        let seperator = Separator::new(Orientation::Vertical);
-        let content = Box::builder()
+        let center_content_seperator = Separator::new(Orientation::Vertical);
+        let center_content = Box::builder()
             //.hexpand(true)
             .orientation(Orientation::Horizontal)
             .spacing(0)
             .build();
 
-        content.append(&scale);
-        content.append(&seperator);
-        content.append(&image);
+        center_content.append(&focus_scale);
+        center_content.append(&center_content_seperator);
+        center_content.append(&focus_image);
 
-        scale.connect_value_changed(move |x| {
+        focus_scale.connect_value_changed(move |x| {
             eprintln!("Changed value! {:?}", x.value());
             let path = if x.value() > 6.0 {
                 "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg"
@@ -79,8 +77,12 @@ fn main() {
             } else {
                 "/var/home/hannes/Downloads/test/I12985_X022_Y029_Z5195.jpg"
             };
-            image.set_from_file(Some(path));
+            focus_image.set_from_file(Some(path));
         });
+
+        ////////////
+        // HEADER //
+        ////////////
 
         //let show_start_title_buttons = Button::new();
         let header_bar = HeaderBar::builder()
@@ -91,38 +93,47 @@ fn main() {
         let open_button = SplitButton::builder().label("Open").build();
         header_bar.pack_start(&open_button);
 
-        // Combine the content in a box
-        let title_widget_content = Box::new(Orientation::Vertical, 0);
-        // Adwaitas' ApplicationWindow does not include a HeaderBar
+        ////////////////////
+        // BOTTOM TOOLBAR //
+        ///////////////////
 
-        /*let bottom_toolbar_widget = Box::builder()
-        .orientation(Orientation::Horizontal)
-        .css_classes(vec!["toolbox".to_string()])
-        .halign(gtk::Align::End)
-        //.margin_top(MARGIN_TOP / 2)
-        .margin_bottom(MARGIN_BOTTOM / 2)
-        .build();*/
-
-        let bottom_toolbar_widget = ActionBar::builder().build();
+        let bottom_toolbar = ActionBar::builder().build();
 
         // TODO: add functionality
-        let focus_button = Button::builder().label("Set Focus").build();
+        let skip_button = Button::builder().label("Skip").build();
+        let focus_button = Button::builder()
+            .label("Set Focus")
+            .css_classes(vec!["suggested-action".to_string()])
+            .build();
+        let focus_skip_link_widget = Box::builder()
+            .css_classes(vec!["linked".to_string()])
+            .build();
+        focus_skip_link_widget.append(&skip_button);
+        focus_skip_link_widget.append(&focus_button);
 
         let neighbour_toggle_button = ToggleButton::builder().label("Toggle Neighbours").build();
 
-        bottom_toolbar_widget.pack_start(&neighbour_toggle_button);
-        bottom_toolbar_widget.pack_end(&focus_button);
+        bottom_toolbar.pack_start(&neighbour_toggle_button);
+        bottom_toolbar.pack_end(&focus_skip_link_widget);
 
-        title_widget_content.append(&header_bar);
-        title_widget_content.append(&content);
-        title_widget_content.append(&bottom_toolbar_widget);
+        //////////////////////
+        // MAIN APPLICATION //
+        //////////////////////
+
+        // Combine the content in a box
+        let application_vertical_widget = Box::new(Orientation::Vertical, 0);
+        // Adwaitas' ApplicationWindow does not include a HeaderBar
+
+        application_vertical_widget.append(&header_bar);
+        application_vertical_widget.append(&center_content);
+        application_vertical_widget.append(&bottom_toolbar);
 
         let window = ApplicationWindow::builder()
             .application(app)
             .default_width(800)
             .default_height(600)
             // add content to window
-            .content(&title_widget_content)
+            .content(&application_vertical_widget)
             .build();
         window.show();
     });
