@@ -1,10 +1,7 @@
-use adw::prelude::*;
-use gtk::prelude::*;
-
-use adw::{ApplicationWindow, HeaderBar, SplitButton};
+use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
 use gtk::{
-    ActionBar, Adjustment, Application, Box, Button, Image, Orientation, Scale, Separator,
-    ToggleButton,
+    prelude::*, ActionBar, Adjustment, Align, Application, AspectFrame, Box, Button, Grid, Image,
+    Orientation, Scale, Separator, ToggleButton,
 };
 
 const MARGIN_TOP: i32 = 32;
@@ -30,11 +27,78 @@ fn main() {
             .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
             .vexpand(true)
             .hexpand(true)
-            .margin_top(MARGIN_TOP)
-            .margin_end(MARGIN_RIGHT)
-            .margin_bottom(MARGIN_BOTTOM)
-            .margin_start(MARGIN_LEFT)
             .build();
+
+        let focus_neighbours_grid = Grid::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .column_spacing(0)
+            .row_spacing(0)
+            .build();
+        let focus_neighbours_aspect_frame = AspectFrame::builder()
+            .child(&focus_neighbours_grid)
+            .ratio(1.0)
+            .xalign(0.5)
+            .yalign(0.5)
+            .build();
+
+        let neighbours_1 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_2 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_3 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_4 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_5 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_6 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_7 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_8 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+        let neighbours_9 = Image::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+            .build();
+
+        //focus_neighbours_grid.add
+
+        focus_neighbours_grid.attach(&neighbours_1, 0, 0, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_2, 1, 0, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_3, 2, 0, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_4, 0, 1, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_5, 1, 1, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_6, 2, 1, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_7, 0, 2, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_8, 1, 2, 1, 1);
+        focus_neighbours_grid.attach(&neighbours_9, 2, 2, 1, 1);
 
         let focus_scale_adjustment = Adjustment::builder()
             .lower(0.0)
@@ -66,7 +130,8 @@ fn main() {
 
         center_content.append(&focus_scale);
         center_content.append(&center_content_seperator);
-        center_content.append(&focus_image);
+        //center_content.append(&focus_image);
+        center_content.append(&focus_neighbours_aspect_frame);
 
         focus_scale.connect_value_changed(move |x| {
             eprintln!("Changed value! {:?}", x.value());
