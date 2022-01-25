@@ -20,6 +20,28 @@ const TOGGLE_NEIGHBOURS_TEXT: &str = "Show Neighbours";
 const SCALE_STEP: f64 = 1.0;
 
 #[derive(Debug, Clone)]
+struct AnnotationZStack {
+    images: Vec<AnnotationImage>,
+    best_index: Option<i32>,
+}
+
+impl AnnotationZStack {
+    pub fn new() -> Self {
+        AnnotationZStack {
+            images: Vec::<AnnotationImage>::new(),
+            best_index: None,
+        }
+    }
+    pub fn push(&mut self, image: AnnotationImage) -> &mut Self {
+        self.images.push(image);
+        self
+    }
+    pub fn first(self) -> Option<AnnotationImage> {
+        self.images.first().map(|x| x.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
 struct AnnotationImage {
     image_path: String,
     neighbours: [Option<String>; 8],
@@ -39,60 +61,32 @@ impl AnnotationImage {
     }
 }
 
-fn main() {
-    let mut annotation_images = Vec::<AnnotationImage>::new();
 
-    annotation_images.push(AnnotationImage::from_vec(
-        "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string(),
-        vec![
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-            Some("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg".to_string()),
-        ],
-    ));
 
-    let application = Application::builder()
-        .application_id("com.example.FirstAdwaitaApp")
-        .build();
+#[derive(Debug, Clone)]
+struct ImageUI {
+    individual: std::sync::Arc<Image>,
+    center: std::sync::Arc<Image>,
+    neighbours: [std::sync::Arc<Image>; 8],
+}
 
-    application.connect_startup(|_| {
-        adw::init();
-    });
-
-    application.connect_activate(|app| {
-        //////////////////
-        // MAIN CONTENT //
-        //////////////////
-
-        let focus_image = std::sync::Arc::new(
+impl ImageUI {
+    pub fn new() -> ImageUI {
+        let individual = std::sync::Arc::new(
             Image::builder()
                 .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
                 .vexpand(true)
                 .hexpand(true)
                 .build(),
         );
-
-        let focus_neighbours_grid = std::sync::Arc::new(
-            Grid::builder()
+        let center = std::sync::Arc::new(
+            Image::builder()
                 .vexpand(true)
                 .hexpand(true)
-                .column_spacing(0)
-                .row_spacing(0)
+                .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
                 .build(),
         );
-        let focus_neighbours_aspect_frame = AspectFrame::builder()
-            .ratio(1.0)
-            .xalign(0.5)
-            .yalign(0.5)
-            .build();
-        focus_neighbours_aspect_frame.set_child(Some(focus_image.as_ref()));
-
-        let neighbours_image: [std::sync::Arc<Image>; 8] = [
+        let neighbours = [
             std::sync::Arc::new(
                 Image::builder()
                     .vexpand(true)
@@ -151,23 +145,100 @@ fn main() {
             ),
         ];
 
-        let focus_image_center = std::sync::Arc::new(
-            Image::builder()
+        ImageUI {
+            individual,
+            center,
+            neighbours,
+        }
+    }
+    pub fn update_image(&self, annotation_image: &AnnotationImage) {
+        self.individual
+            .set_from_file(Some(annotation_image.image_path.clone()));
+        self.center
+            .set_from_file(Some(annotation_image.image_path.clone()));
+
+        for index in 0..annotation_image.neighbours.len() {
+            self.neighbours[index].set_from_file(annotation_image.neighbours[index].clone());
+        }
+    }
+}
+
+fn main() {
+    let application = Application::builder()
+        .application_id("com.example.FirstAdwaitaApp")
+        .build();
+
+    application.connect_startup(|_| {
+        adw::init();
+    });
+
+    application.connect_activate(|app| {
+        let mut z_stack = AnnotationZStack::new();
+
+        let path = "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg";
+        z_stack.push(AnnotationImage::from_vec(
+            path.to_string(),
+            vec![
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+            ],
+        ));
+
+        let path = "/var/home/hannes/Downloads/test/I12985_X022_Y029_Z5195.jpg";
+        z_stack.push(AnnotationImage::from_vec(
+            path.to_string(),
+            vec![
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+                Some(path.to_string()),
+            ],
+        ));
+
+        //////////////////
+        // MAIN CONTENT //
+        //////////////////
+
+        let image_ui = std::sync::Arc::new(ImageUI::new());
+
+        image_ui.update_image(&z_stack.first().unwrap());
+
+        let focus_neighbours_grid = std::sync::Arc::new(
+            Grid::builder()
                 .vexpand(true)
                 .hexpand(true)
-                .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
+                .column_spacing(0)
+                .row_spacing(0)
                 .build(),
         );
-        focus_neighbours_grid.attach(focus_image_center.as_ref(), 1, 1, 1, 1);
 
-        for index in 0..neighbours_image.len() {
+        let focus_neighbours_aspect_frame = AspectFrame::builder()
+            .ratio(1.0)
+            .xalign(0.5)
+            .yalign(0.5)
+            .build();
+        focus_neighbours_aspect_frame.set_child(Some(image_ui.individual.as_ref()));
+
+        focus_neighbours_grid.attach(image_ui.center.as_ref(), 1, 1, 1, 1);
+
+        for index in 0..image_ui.neighbours.len() {
             // offset index for later images to leave out middle of the grid
             let grid_index: i32 = if index > 3 { index + 1 } else { index }
                 .try_into()
                 .unwrap();
             let column = grid_index % 3;
             let row = grid_index / 3;
-            focus_neighbours_grid.attach(neighbours_image[index].as_ref(), column, row, 1, 1);
+            focus_neighbours_grid.attach(image_ui.neighbours[index].as_ref(), column, row, 1, 1);
             eprintln!("{column} {row}");
         }
 
@@ -205,7 +276,7 @@ fn main() {
         center_content.append(&center_content_seperator);
         center_content.append(&focus_neighbours_aspect_frame);
 
-        let focus_image_clone = focus_image.clone();
+        let focus_image = image_ui.individual.clone();
         focus_scale.connect_value_changed(move |x| {
             eprintln!("Changed value! {:?}", x.value());
             let path = if x.value() > 6.0 {
@@ -215,7 +286,7 @@ fn main() {
             } else {
                 "/var/home/hannes/Downloads/test/I12985_X022_Y029_Z5195.jpg"
             };
-            focus_image_clone.as_ref().set_from_file(Some(path));
+            focus_image.as_ref().set_from_file(Some(path));
         });
 
         ////////////
@@ -254,18 +325,19 @@ fn main() {
             .width_request(158)
             .build();
 
-        let focus_image_clone = focus_image.clone();
-        let focus_neighbours_grid_clone = focus_neighbours_grid.clone();
-        neighbour_toggle_button.connect_toggled(move |x| match x.is_active() {
+        let focus_image = image_ui.individual.clone();
+        neighbour_toggle_button.connect_toggled(
+            clone!(@strong focus_neighbours_grid => move |x| match x.is_active() {
             true => {
-                focus_neighbours_aspect_frame.set_child(Some(focus_neighbours_grid_clone.as_ref()));
+                    focus_neighbours_aspect_frame.set_child(Some(focus_neighbours_grid.as_ref()));
                 x.set_label(TOGGLE_NEIGHBOURS_TEXT_TOGGLED);
             }
             false => {
-                focus_neighbours_aspect_frame.set_child(Some(focus_image_clone.as_ref()));
+                    focus_neighbours_aspect_frame.set_child(Some(focus_image.as_ref()));
                 x.set_label(TOGGLE_NEIGHBOURS_TEXT);
             }
-        });
+            }),
+        );
         bottom_toolbar.pack_start(&neighbour_toggle_button);
         bottom_toolbar.pack_end(&focus_skip_link_widget);
 
