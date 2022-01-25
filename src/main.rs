@@ -72,77 +72,17 @@ struct ImageUI {
 
 impl ImageUI {
     pub fn new() -> ImageUI {
-        let individual = std::sync::Arc::new(
-            Image::builder()
-                .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                .vexpand(true)
-                .hexpand(true)
-                .build(),
-        );
-        let center = std::sync::Arc::new(
-            Image::builder()
-                .vexpand(true)
-                .hexpand(true)
-                .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                .build(),
-        );
+        let individual = std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build());
+        let center = std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build());
         let neighbours = [
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
-            std::sync::Arc::new(
-                Image::builder()
-                    .vexpand(true)
-                    .hexpand(true)
-                    .file("/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg")
-                    .build(),
-            ),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
         ];
 
         ImageUI {
