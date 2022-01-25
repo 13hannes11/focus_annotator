@@ -3,14 +3,14 @@ use gio::SimpleAction;
 use glib::clone;
 use gtk::{gio, glib};
 use gtk::{
-    prelude::*, ActionBar, Adjustment, Application, AspectFrame, Box, Button, Grid, Image,
-    Orientation, PositionType, Scale, Separator, ToggleButton,
+    ActionBar, Application, AspectFrame, Box, Button, Grid, Image, Orientation, PositionType,
+    Scale, Separator, ToggleButton,
 };
 
 const MARGIN_TOP: i32 = 32;
 const MARGIN_BOTTOM: i32 = 32;
-const MARGIN_LEFT: i32 = 32;
-const MARGIN_RIGHT: i32 = 32;
+const MARGIN_LEFT: i32 = 16;
+const MARGIN_RIGHT_SCALE_ADDITIONAL: i32 = 42;
 
 const NONE_STRING_OPTION: Option<String> = None;
 
@@ -103,9 +103,26 @@ impl ImageUI {
     }
 }
 
+fn update_focus_scale(focus_scale: &Scale, z_stack: AnnotationZStack) {
+    let max = (z_stack.images.len() - 1) as f64;
+    focus_scale.set_range(0.0, max);
+    focus_scale.set_value(f64::floor(max / 2.0));
+
+    if z_stack.best_index.is_some() {
+        focus_scale.add_mark(
+            z_stack.best_index.unwrap() as f64,
+            PositionType::Right,
+            Some("focus"),
+        );
+        focus_scale.set_margin_end(0);
+    } else {
+        focus_scale.set_margin_end(MARGIN_RIGHT_SCALE_ADDITIONAL);
+    }
+}
+
 fn main() {
     let application = Application::builder()
-        .application_id("com.example.FirstAdwaitaApp")
+        .application_id("org.kuchelmeister.FocusAnnotator")
         .build();
 
     application.connect_startup(|_| {
@@ -151,7 +168,9 @@ fn main() {
 
         let image_ui = std::sync::Arc::new(ImageUI::new());
 
-        image_ui.update_image(&z_stack.first().unwrap());
+        image_ui
+            .as_ref()
+            .update_image(&z_stack.clone().first().unwrap());
 
         let focus_neighbours_grid = std::sync::Arc::new(
             Grid::builder()
@@ -182,28 +201,24 @@ fn main() {
             eprintln!("{column} {row}");
         }
 
-        let focus_scale_adjustment = Adjustment::builder()
-            .lower(0.0)
-            .upper(10.0)
-            .value(5.0)
-            .step_increment(SCALE_STEP)
-            .build();
-
         let focus_scale = std::sync::Arc::new(
             Scale::builder()
                 .orientation(Orientation::Vertical)
-                .adjustment(&focus_scale_adjustment)
                 .vexpand(true)
                 .margin_top(MARGIN_TOP)
                 .margin_bottom(MARGIN_BOTTOM)
-                .margin_start(MARGIN_LEFT / 2)
-                .margin_end(MARGIN_RIGHT / 2)
+                .margin_start(MARGIN_LEFT)
                 .draw_value(true)
                 .inverted(true)
                 .round_digits(0)
                 .digits(0)
                 .build(),
         );
+
+        update_focus_scale(focus_scale.as_ref(), z_stack.clone());
+
+        // TODO: if picture has best focus add marking
+        focus_scale.add_mark(5.0, PositionType::Left, Some("focus"));
 
         let center_content_seperator = Separator::new(Orientation::Vertical);
         let center_content = Box::builder()
@@ -216,18 +231,11 @@ fn main() {
         center_content.append(&center_content_seperator);
         center_content.append(&focus_neighbours_aspect_frame);
 
-        let focus_image = image_ui.individual.clone();
-        focus_scale.connect_value_changed(move |x| {
-            eprintln!("Changed value! {:?}", x.value());
-            let path = if x.value() > 6.0 {
-                "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg"
-            } else if x.value() > 3.0 {
-                "/var/home/hannes/Downloads/test/I12984_X022_Y029_Z5146.jpg"
-            } else {
-                "/var/home/hannes/Downloads/test/I12985_X022_Y029_Z5195.jpg"
-            };
-            focus_image.as_ref().set_from_file(Some(path));
-        });
+        focus_scale.connect_value_changed(clone!(@strong image_ui => move |x| {
+            let index = x.value() as usize;
+            let img = z_stack.images[index].clone();
+            image_ui.update_image(&img);
+        }));
 
         ////////////
         // HEADER //
