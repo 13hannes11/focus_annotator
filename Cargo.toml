@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 adw = { version = "0.1.0", package = "libadwaita" }
-gtk = { version = "0.4.4", package = "gtk4" }
+gtk = { version = "0.4", package = "gtk4" }
+gls = { version = "0.1.6" }
 

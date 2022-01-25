@@ -1,7 +1,10 @@
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
+use gio::SimpleAction;
+use glib::clone;
+use gtk::{gio, glib};
 use gtk::{
     prelude::*, ActionBar, Adjustment, Application, AspectFrame, Box, Button, Grid, Image,
-    Orientation, Scale, Separator, ToggleButton,
+    Orientation, PositionType, Scale, Separator, ToggleButton,
 };
 
 const MARGIN_TOP: i32 = 32;
@@ -13,6 +16,8 @@ const NONE_STRING_OPTION: Option<String> = None;
 
 const TOGGLE_NEIGHBOURS_TEXT_TOGGLED: &str = "Hide Neighbours";
 const TOGGLE_NEIGHBOURS_TEXT: &str = "Show Neighbours";
+
+const SCALE_STEP: f64 = 1.0;
 
 #[derive(Debug, Clone)]
 struct AnnotationImage {
@@ -170,7 +175,7 @@ fn main() {
             .lower(0.0)
             .upper(10.0)
             .value(5.0)
-            .step_increment(1.0)
+            .step_increment(SCALE_STEP)
             .build();
 
         let focus_scale = std::sync::Arc::new(
@@ -283,8 +288,52 @@ fn main() {
             // add content to window
             .content(&application_vertical_widget)
             .build();
+
+        ////////////////////////
+        // Keyboard Shortcuts //
+        ////////////////////////
+
+        let action_toggle_neighbour = SimpleAction::new("toggle_neighbour", None);
+        action_toggle_neighbour.connect_activate(clone!(@weak window => move |_, _| {
+            neighbour_toggle_button.set_active(!neighbour_toggle_button.is_active());
+        }));
+
+        let action_focus_scale_increment = SimpleAction::new("increment_focus_scale", None);
+        action_focus_scale_increment.connect_activate(clone!(@strong focus_scale => move |_, _| {
+            focus_scale.set_value(focus_scale.value() + SCALE_STEP);
+        }));
+
+        let action_focus_scale_decrement = SimpleAction::new("decrement_focus_scale", None);
+        action_focus_scale_decrement.connect_activate(clone!(@strong focus_scale => move |_, _| {
+            focus_scale.set_value(focus_scale.value() - SCALE_STEP);
+        }));
+
+        let mark_focus = SimpleAction::new("mark_focus", None);
+        mark_focus.connect_activate(|_, _| {
+            // TODO: implement mark_focus
+            eprintln! {"Focus Set!"};
+        });
+
+        let skip_focus = SimpleAction::new("skip_focus", None);
+        skip_focus.connect_activate(|_, _| {
+            // TODO: implement skip focus
+            eprintln! {"Skip!"};
+        });
+
+        window.add_action(&action_toggle_neighbour);
+        window.add_action(&action_focus_scale_increment);
+        window.add_action(&action_focus_scale_decrement);
+        window.add_action(&mark_focus);
+        window.add_action(&skip_focus);
+
         window.show();
     });
+
+    application.set_accels_for_action("win.toggle_neighbour", &["G"]);
+    application.set_accels_for_action("win.increment_focus_scale", &["W"]);
+    application.set_accels_for_action("win.decrement_focus_scale", &["S"]);
+    application.set_accels_for_action("win.mark_focus", &["M"]);
+    application.set_accels_for_action("win.skip_focus", &["N"]);
 
     application.run();
 }
