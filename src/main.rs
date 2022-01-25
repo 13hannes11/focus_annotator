@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
 use gio::SimpleAction;
 use glib::clone;
@@ -65,24 +67,24 @@ impl AnnotationImage {
 
 #[derive(Debug, Clone)]
 struct ImageUI {
-    individual: std::sync::Arc<Image>,
-    center: std::sync::Arc<Image>,
-    neighbours: [std::sync::Arc<Image>; 8],
+    individual: Arc<Image>,
+    center: Arc<Image>,
+    neighbours: [Arc<Image>; 8],
 }
 
 impl ImageUI {
     pub fn new() -> ImageUI {
-        let individual = std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build());
-        let center = std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build());
+        let individual = Arc::new(Image::builder().vexpand(true).hexpand(true).build());
+        let center = Arc::new(Image::builder().vexpand(true).hexpand(true).build());
         let neighbours = [
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
-            std::sync::Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
+            Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
         ];
 
         ImageUI {
@@ -166,13 +168,13 @@ fn main() {
         // MAIN CONTENT //
         //////////////////
 
-        let image_ui = std::sync::Arc::new(ImageUI::new());
+        let image_ui = Arc::new(ImageUI::new());
 
         image_ui
             .as_ref()
             .update_image(&z_stack.clone().first().unwrap());
 
-        let focus_neighbours_grid = std::sync::Arc::new(
+        let focus_neighbours_grid = Arc::new(
             Grid::builder()
                 .vexpand(true)
                 .hexpand(true)
@@ -201,7 +203,7 @@ fn main() {
             eprintln!("{column} {row}");
         }
 
-        let focus_scale = std::sync::Arc::new(
+        let focus_scale = Arc::new(
             Scale::builder()
                 .orientation(Orientation::Vertical)
                 .vexpand(true)
