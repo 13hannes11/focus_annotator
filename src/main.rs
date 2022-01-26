@@ -121,29 +121,60 @@ fn update_focus_scale(focus_scale: &Scale, z_stack: AnnotationZStack) {
     }
 }
 
-fn next_image(
+fn change_image(
+    direction: i32,
     current_z_stack_index: &Cell<usize>,
     annotaion_dataset: Vec<AnnotationZStack>,
     focus_scale: &Scale,
     image_ui: &ImageUI,
 ) {
-    let index = current_z_stack_index.get() + 1;
+    let index = current_z_stack_index.get() as i32 + direction;
+
+    eprintln!("Index after {index}");
     // Makes sure we are not overstepping bounds
-    let index = if index < annotaion_dataset.len() {
-        current_z_stack_index.set(index);
-        index
-    } else if index > 0 {
-        eprintln!("Reached the end of the images");
-        index - 1
+    let index = if index < annotaion_dataset.len() as i32 && index >= 0 {
+        current_z_stack_index.set(index.try_into().unwrap_or(0));
+        index as usize
     } else {
-        index
+        current_z_stack_index.get()
     };
+    eprintln!("Index after {index}");
 
     let z_stack = annotaion_dataset[index].clone();
     update_focus_scale(&focus_scale, z_stack);
 
     let img = annotaion_dataset[index].images[focus_scale.value() as usize].clone();
     image_ui.update_image(&img);
+}
+
+fn next_image(
+    current_z_stack_index: &Cell<usize>,
+    annotaion_dataset: Vec<AnnotationZStack>,
+    focus_scale: &Scale,
+    image_ui: &ImageUI,
+) {
+    change_image(
+        1,
+        current_z_stack_index,
+        annotaion_dataset,
+        focus_scale,
+        image_ui,
+    );
+}
+
+fn previous_image(
+    current_z_stack_index: &Cell<usize>,
+    annotaion_dataset: Vec<AnnotationZStack>,
+    focus_scale: &Scale,
+    image_ui: &ImageUI,
+) {
+    change_image(
+        -1,
+        current_z_stack_index,
+        annotaion_dataset,
+        focus_scale,
+        image_ui,
+    );
 }
 
 fn save_annotation(z_stack: AnnotationZStack) {
@@ -166,33 +197,51 @@ fn main() {
 
         let mut z_stack = AnnotationZStack::new();
 
-        let path = "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg";
+        let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_0_1200.jpg";
         z_stack.push(AnnotationImage::from_vec(
             path.to_string(),
             vec![
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
+                None,
+                None,
+                None,
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_0_1125.jpg".to_string()),
+                None,
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_75_1125.jpg".to_string()),
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_75_1200.jpg".to_string()),
+                None,
+                None,
             ],
         ));
 
-        let path = "/var/home/hannes/Downloads/test/I12985_X022_Y029_Z5195.jpg";
+        let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_0_1200.jpg";
         z_stack.push(AnnotationImage::from_vec(
             path.to_string(),
             vec![
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
-                Some(path.to_string()),
+                None,
+                None,
+                None,
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_0_1125.jpg".to_string()),
+                None,
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_75_1125.jpg".to_string()),
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_75_1200.jpg".to_string()),
+                None,
+                None,
+            ],
+        ));
+
+        let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_0_1200.jpg";
+        z_stack.push(AnnotationImage::from_vec(
+            path.to_string(),
+            vec![
+                None,
+                None,
+                None,
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_0_1125.jpg".to_string()),
+                None,
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1125.jpg".to_string()),
+                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1200.jpg".to_string()),
+                None,
+                None,
             ],
         ));
 
@@ -205,14 +254,15 @@ fn main() {
             z_stack.push(AnnotationImage::from_vec(
                 path.to_string(),
                 vec![
-                    Some(path.to_string()),
-                    Some(path.to_string()),
-                    Some(path.to_string()),
-                    Some(path.to_string()),
-                    Some(path.to_string()),
-                    Some(path.to_string()),
-                    Some(path.to_string()),
-                    Some(path.to_string()),
+                    None,
+                    None,
+                    None,
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_0_1125.jpg".to_string()),
+                    None,
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1125.jpg".to_string()),
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1200.jpg".to_string()),
+                    None,
+                    None,
                 ],
             ));
 
@@ -310,7 +360,13 @@ fn main() {
 
         let bottom_toolbar = ActionBar::builder().build();
 
-        // TODO: add back button
+        let back_button = Button::builder().label("Back").build();
+
+        back_button.connect_clicked(|button| {
+            button.activate_action("win.back_focus", None)
+            .expect("The action does not exist.");
+        });
+
         let skip_button = Button::builder().label("Skip").build();
 
         skip_button.connect_clicked(|button| {
@@ -330,6 +386,7 @@ fn main() {
         let focus_skip_link_widget = Box::builder()
             .css_classes(vec!["linked".to_string()])
             .build();
+        focus_skip_link_widget.append(&back_button);
         focus_skip_link_widget.append(&skip_button);
         focus_skip_link_widget.append(&focus_button);
 
@@ -416,8 +473,13 @@ fn main() {
         }));
 
         let skip_focus = SimpleAction::new("skip_focus", None);
-        skip_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong annotaion_dataset => move |_, _| {
+        skip_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
             next_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.clone(), focus_scale.as_ref(), image_ui.as_ref());
+        }));
+
+        let back_focus = SimpleAction::new("back_focus", None);
+        back_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
+            previous_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.clone(), focus_scale.as_ref(), image_ui.as_ref());
         }));
 
         window.add_action(&action_toggle_neighbour);
@@ -425,6 +487,7 @@ fn main() {
         window.add_action(&action_focus_scale_decrement);
         window.add_action(&mark_focus);
         window.add_action(&skip_focus);
+        window.add_action(&back_focus);
 
         window.show();
     });
@@ -434,6 +497,7 @@ fn main() {
     application.set_accels_for_action("win.decrement_focus_scale", &["S"]);
     application.set_accels_for_action("win.mark_focus", &["M"]);
     application.set_accels_for_action("win.skip_focus", &["N"]);
+    application.set_accels_for_action("win.back_focus", &["B"]);
 
     application.run();
 }
