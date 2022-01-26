@@ -4,7 +4,7 @@ use std::sync::Arc;
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
 use gio::SimpleAction;
 use glib::clone;
-use gtk::{gio, glib};
+use gtk::{gio, glib, FileChooserAction, FileChooserDialog, ResponseType};
 use gtk::{
     ActionBar, Application, AspectFrame, Box, Button, Grid, Image, Orientation, PositionType,
     Scale, Separator, ToggleButton,
@@ -301,7 +301,7 @@ fn main() {
             .build();
 
         // TODO: add button functionality
-        let open_button = SplitButton::builder().label("Open").build();
+        let open_button = SplitButton::builder().label("Open").build();        
         header_bar.pack_start(&open_button);
 
         ////////////////////
@@ -373,6 +373,17 @@ fn main() {
             // add content to window
             .content(&application_vertical_widget)
             .build();
+
+
+        open_button.connect_clicked(clone!(@weak window => move |_| {
+                let file_chooser_action = FileChooserAction::Open;
+
+                // TODO: actually open and load data
+    
+                let buttons = [("Open", ResponseType::Accept)];
+                let file_chooser = FileChooserDialog::new(Some("Chose a data file!"), Some(&window), file_chooser_action, &buttons);
+                file_chooser.show();
+        }));
 
         ////////////////////////
         // Keyboard Shortcuts //
