@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::Arc;
 
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
@@ -24,7 +25,7 @@ const SCALE_STEP: f64 = 1.0;
 #[derive(Debug, Clone)]
 struct AnnotationZStack {
     images: Vec<AnnotationImage>,
-    best_index: Option<i32>,
+    best_index: Option<usize>,
 }
 
 impl AnnotationZStack {
@@ -62,8 +63,6 @@ impl AnnotationImage {
         }
     }
 }
-
-
 
 #[derive(Debug, Clone)]
 struct ImageUI {
@@ -122,6 +121,36 @@ fn update_focus_scale(focus_scale: &Scale, z_stack: AnnotationZStack) {
     }
 }
 
+fn next_image(
+    current_z_stack_index: &Cell<usize>,
+    annotaion_dataset: Vec<AnnotationZStack>,
+    focus_scale: &Scale,
+    image_ui: &ImageUI,
+) {
+    let index = current_z_stack_index.get() + 1;
+    // Makes sure we are not overstepping bounds
+    let index = if index < annotaion_dataset.len() {
+        current_z_stack_index.set(index);
+        index
+    } else if index > 0 {
+        eprintln!("Reached the end of the images");
+        index - 1
+    } else {
+        index
+    };
+
+    let z_stack = annotaion_dataset[index].clone();
+    update_focus_scale(&focus_scale, z_stack);
+
+    let img = annotaion_dataset[index].images[focus_scale.value() as usize].clone();
+    image_ui.update_image(&img);
+}
+
+fn save_annotation(z_stack: AnnotationZStack) {
+    // TODO: implement saving
+    eprintln!("Saving is not implemented yet!")
+}
+
 fn main() {
     let application = Application::builder()
         .application_id("org.kuchelmeister.FocusAnnotator")
@@ -132,6 +161,9 @@ fn main() {
     });
 
     application.connect_activate(|app| {
+        let current_z_stack_index = Arc::new(Cell::new(0));
+        let mut annotaion_dataset = Vec::<AnnotationZStack>::new();
+
         let mut z_stack = AnnotationZStack::new();
 
         let path = "/var/home/hannes/Downloads/test/I12982_X022_Y029_Z5048.jpg";
@@ -163,6 +195,29 @@ fn main() {
                 Some(path.to_string()),
             ],
         ));
+
+        annotaion_dataset.push(z_stack.clone());
+
+        {
+            let mut z_stack = AnnotationZStack::new();
+
+            let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg";
+            z_stack.push(AnnotationImage::from_vec(
+                path.to_string(),
+                vec![
+                    Some(path.to_string()),
+                    Some(path.to_string()),
+                    Some(path.to_string()),
+                    Some(path.to_string()),
+                    Some(path.to_string()),
+                    Some(path.to_string()),
+                    Some(path.to_string()),
+                    Some(path.to_string()),
+                ],
+            ));
+
+            annotaion_dataset.push(z_stack.clone());
+        }
 
         //////////////////
         // MAIN CONTENT //
@@ -219,9 +274,6 @@ fn main() {
 
         update_focus_scale(focus_scale.as_ref(), z_stack.clone());
 
-        // TODO: if picture has best focus add marking
-        focus_scale.add_mark(5.0, PositionType::Left, Some("focus"));
-
         let center_content_seperator = Separator::new(Orientation::Vertical);
         let center_content = Box::builder()
             //.hexpand(true)
@@ -233,7 +285,7 @@ fn main() {
         center_content.append(&center_content_seperator);
         center_content.append(&focus_neighbours_aspect_frame);
 
-        focus_scale.connect_value_changed(clone!(@strong image_ui => move |x| {
+        focus_scale.connect_value_changed(clone!(@strong image_ui, @strong z_stack => move |x| {
             let index = x.value() as usize;
             let img = z_stack.images[index].clone();
             image_ui.update_image(&img);
@@ -258,12 +310,23 @@ fn main() {
 
         let bottom_toolbar = ActionBar::builder().build();
 
-        // TODO: add functionality
+        // TODO: add back button
         let skip_button = Button::builder().label("Skip").build();
+
+        skip_button.connect_clicked(|button| {
+            button.activate_action("win.skip_focus", None)
+            .expect("The action does not exist.");
+        });
+
         let focus_button = Button::builder()
             .label("Set Focus")
             .css_classes(vec!["suggested-action".to_string()])
             .build();
+
+        focus_button.connect_clicked(|button| {
+            button.activate_action("win.mark_focus", None)
+            .expect("The action does not exist.");
+        });
         let focus_skip_link_widget = Box::builder()
             .css_classes(vec!["linked".to_string()])
             .build();
@@ -278,14 +341,14 @@ fn main() {
         let focus_image = image_ui.individual.clone();
         neighbour_toggle_button.connect_toggled(
             clone!(@strong focus_neighbours_grid => move |x| match x.is_active() {
-            true => {
+                true => {
                     focus_neighbours_aspect_frame.set_child(Some(focus_neighbours_grid.as_ref()));
-                x.set_label(TOGGLE_NEIGHBOURS_TEXT_TOGGLED);
-            }
-            false => {
+                    x.set_label(TOGGLE_NEIGHBOURS_TEXT_TOGGLED);
+                }
+                false => {
                     focus_neighbours_aspect_frame.set_child(Some(focus_image.as_ref()));
-                x.set_label(TOGGLE_NEIGHBOURS_TEXT);
-            }
+                    x.set_label(TOGGLE_NEIGHBOURS_TEXT);
+                }
             }),
         );
         bottom_toolbar.pack_start(&neighbour_toggle_button);
@@ -331,16 +394,20 @@ fn main() {
         }));
 
         let mark_focus = SimpleAction::new("mark_focus", None);
-        mark_focus.connect_activate(|_, _| {
-            // TODO: implement mark_focus
+        mark_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
             eprintln! {"Focus Set!"};
-        });
+            let index = current_z_stack_index.as_ref().get();
+
+            let mut z_stack = annotaion_dataset.get(index).unwrap().clone();
+            z_stack.best_index = Some(focus_scale.value() as usize);
+            save_annotation(z_stack);
+            next_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.clone(), focus_scale.as_ref(), image_ui.as_ref());
+        }));
 
         let skip_focus = SimpleAction::new("skip_focus", None);
-        skip_focus.connect_activate(|_, _| {
-            // TODO: implement skip focus
-            eprintln! {"Skip!"};
-        });
+        skip_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong annotaion_dataset => move |_, _| {
+            next_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.clone(), focus_scale.as_ref(), image_ui.as_ref());
+        }));
 
         window.add_action(&action_toggle_neighbour);
         window.add_action(&action_focus_scale_increment);
