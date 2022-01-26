@@ -13,7 +13,7 @@ use gtk::{
 const MARGIN_TOP: i32 = 32;
 const MARGIN_BOTTOM: i32 = 32;
 const MARGIN_LEFT: i32 = 16;
-const MARGIN_RIGHT_SCALE_ADDITIONAL: i32 = 42;
+const MARGIN_RIGHT_SCALE_ADDITIONAL: i32 = 38;
 
 const NONE_STRING_OPTION: Option<String> = None;
 
@@ -117,6 +117,7 @@ fn update_focus_scale(focus_scale: &Scale, z_stack: AnnotationZStack) {
         );
         focus_scale.set_margin_end(0);
     } else {
+        focus_scale.clear_marks();
         focus_scale.set_margin_end(MARGIN_RIGHT_SCALE_ADDITIONAL);
     }
 }
@@ -249,6 +250,8 @@ fn main() {
 
         {
             let mut z_stack = AnnotationZStack::new();
+
+            z_stack.best_index = Some(0);
 
             let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg";
             z_stack.push(AnnotationImage::from_vec(
