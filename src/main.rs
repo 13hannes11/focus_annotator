@@ -1,13 +1,16 @@
 use std::cell::Cell;
 use std::sync::Arc;
+use std::fs;
+
+use serde::{Deserialize, Serialize};
 
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
 use gio::SimpleAction;
 use glib::clone;
 use gtk::{gio, glib, FileChooserAction, FileChooserDialog, ResponseType};
 use gtk::{
-    ActionBar, Application, AspectFrame, Box, Button, Grid, Image, Orientation, PositionType,
-    Scale, Separator, ToggleButton,
+    ActionBar, Application, AspectFrame, Box, Button, FileFilter, Grid, Image, Orientation,
+    PositionType, Scale, Separator, ToggleButton,
 };
 
 const MARGIN_TOP: i32 = 32;
@@ -22,7 +25,7 @@ const TOGGLE_NEIGHBOURS_TEXT: &str = "Show Neighbours";
 
 const SCALE_STEP: f64 = 1.0;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct AnnotationZStack {
     images: Vec<AnnotationImage>,
     best_index: Option<usize>,
@@ -44,7 +47,7 @@ impl AnnotationZStack {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct AnnotationImage {
     image_path: String,
     neighbours: [Option<String>; 8],
@@ -178,9 +181,14 @@ fn previous_image(
     );
 }
 
-fn save_annotation(z_stack: AnnotationZStack) {
+fn save_annotation(annotation_dataset: &Vec<AnnotationZStack>) {
     // TODO: implement saving
-    eprintln!("Saving is not implemented yet!")
+    eprintln!("Saving is not implemented yet!");
+    // Serialize it to a JSON string.
+    let j = serde_json::to_string(&annotation_dataset).unwrap();
+
+    // Print, write to a file, or send to an HTTP server.
+    eprintln!("{}", &j);
 }
 
 fn main() {
@@ -434,15 +442,32 @@ fn main() {
             .content(&application_vertical_widget)
             .build();
 
+        let file_chooser_action = FileChooserAction::Open;
+        let buttons = [("Open", ResponseType::Ok), ("Cancel", ResponseType::Cancel)];
+        let filter = FileFilter::new();
+        filter.add_pattern(r"*.json");
+
+        let file_chooser = FileChooserDialog::new(Some("Chose a data file!"), Some(&window), file_chooser_action, &buttons);
+        file_chooser.set_select_multiple(false);
+        file_chooser.set_filter(&filter);
+
+        file_chooser.connect_response(clone!(@strong annotaion_dataset => move |dialog: &FileChooserDialog, response: ResponseType| {
+            if response == ResponseType::Ok {
+                let file = dialog.file().expect("Couldn't get file");
+                eprintln!("Open");
+                let filename = file.path().expect("Couldn't get file path");
+                let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+                
+                let dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();                
+                // TODO: update data after loading
+            }
+            dialog.close();        
+        }));
 
         open_button.connect_clicked(clone!(@weak window => move |_| {
-                let file_chooser_action = FileChooserAction::Open;
-
                 // TODO: actually open and load data
-    
-                let buttons = [("Open", ResponseType::Accept)];
-                let file_chooser = FileChooserDialog::new(Some("Chose a data file!"), Some(&window), file_chooser_action, &buttons);
                 file_chooser.show();
+
         }));
 
         ////////////////////////
@@ -469,9 +494,7 @@ fn main() {
             eprintln! {"Focus Set!"};
             let index = current_z_stack_index.as_ref().get();
 
-            let mut z_stack = annotaion_dataset.get(index).unwrap().clone();
-            z_stack.best_index = Some(focus_scale.value() as usize);
-            save_annotation(z_stack);
+            save_annotation(&annotaion_dataset);
             next_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.clone(), focus_scale.as_ref(), image_ui.as_ref());
         }));
 
