@@ -265,15 +265,15 @@ fn main() {
             z_stack.push(AnnotationImage::from_vec(
                 path.to_string(),
                 vec![
-                    None,
-                    None,
-                    None,
-                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_0_1125.jpg".to_string()),
-                    None,
-                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1125.jpg".to_string()),
-                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1200.jpg".to_string()),
-                    None,
-                    None,
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),    
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),    
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),                    
+                    Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
                 ],
             ));
 
