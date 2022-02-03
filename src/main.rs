@@ -1,5 +1,5 @@
-use std::cell::Cell;
-use std::sync::{Arc, Mutex};
+use std::cell::{Cell, RefCell};
+use std::sync::{Arc};
 use std::fs;
 
 use serde::{Deserialize, Serialize};
@@ -128,7 +128,7 @@ fn update_focus_scale(focus_scale: &Scale, z_stack: AnnotationZStack) {
 fn change_image(
     direction: i32,
     current_z_stack_index: &Cell<usize>,
-    annotaion_dataset: Vec<AnnotationZStack>,
+    annotaion_dataset: &Vec<AnnotationZStack>,
     focus_scale: &Scale,
     image_ui: &ImageUI,
 ) {
@@ -153,7 +153,7 @@ fn change_image(
 
 fn next_image(
     current_z_stack_index: &Cell<usize>,
-    annotaion_dataset: Vec<AnnotationZStack>,
+    annotaion_dataset: &Vec<AnnotationZStack>,
     focus_scale: &Scale,
     image_ui: &ImageUI,
 ) {
@@ -168,7 +168,7 @@ fn next_image(
 
 fn previous_image(
     current_z_stack_index: &Cell<usize>,
-    annotaion_dataset: Vec<AnnotationZStack>,
+    annotaion_dataset: &Vec<AnnotationZStack>,
     focus_scale: &Scale,
     image_ui: &ImageUI,
 ) {
@@ -218,7 +218,7 @@ fn setup_shortcuts(app: &Application) {
 
 fn build_ui(app: &Application) {
     let current_z_stack_index = Arc::new(Cell::new(0));
-    let annotaion_dataset = Arc::new(Mutex::new(Vec::<AnnotationZStack>::new()));
+    let annotaion_dataset = Arc::new(RefCell::new(Vec::<AnnotationZStack>::new()));
 
     let mut z_stack = AnnotationZStack::new();
 
@@ -270,7 +270,7 @@ fn build_ui(app: &Application) {
         ],
     ));
 
-    annotaion_dataset.lock().unwrap().push(z_stack.clone());
+    annotaion_dataset.borrow_mut().push(z_stack.clone());
 
     {
         let mut z_stack = AnnotationZStack::new();
@@ -293,7 +293,7 @@ fn build_ui(app: &Application) {
             ],
         ));
 
-        annotaion_dataset.lock().unwrap().push(z_stack.clone());
+        annotaion_dataset.borrow_mut().push(z_stack.clone());
     }
 
     //////////////////
@@ -458,7 +458,7 @@ fn build_ui(app: &Application) {
         .content(&application_vertical_widget)
         .build();
 
-    open_button.connect_clicked(clone!(@weak window => move |_| {
+    open_button.connect_clicked(clone!(@weak window, @weak annotaion_dataset => move |_| {
             // TODO: actually open and load data
             
 
@@ -471,21 +471,22 @@ fn build_ui(app: &Application) {
             file_chooser.set_select_multiple(false);
             file_chooser.set_filter(&filter);
         
-            file_chooser.connect_response(move |dialog: &FileChooserDialog, response: ResponseType| {
+            file_chooser.connect_response(clone!(@weak window, @weak annotaion_dataset => move |dialog: &FileChooserDialog, response: ResponseType| {
                 if response == ResponseType::Ok {
                     let file = dialog.file().expect("Couldn't get file");
                     eprintln!("Open");
                     let filename = file.path().expect("Couldn't get file path");
                     let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
                     
-                    let mut dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
+                    let mut new_dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
                     eprintln!("{}", contents);
-                    //annotaion_dataset.lock().unwrap().clear();
-                    //annotaion_dataset.lock().unwrap().append(&mut dataset);
-                    // TODO: update data after loading
+                    
+                    let mut dataset = annotaion_dataset.borrow_mut();
+                    dataset.clear();
+                    dataset.append(&mut new_dataset);
                 }
                 dialog.close();        
-            });
+            }));
 
             file_chooser.show();
 
@@ -514,20 +515,23 @@ fn build_ui(app: &Application) {
     mark_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
         eprintln! {"Focus Set!"};
         let index = current_z_stack_index.as_ref().get();
-        annotaion_dataset.lock().unwrap()[index].best_index = Some(focus_scale.value() as usize);
+        let mut dataset = annotaion_dataset.borrow_mut();
+        dataset[index].best_index = Some(focus_scale.value() as usize);
 
-        save_annotation(&annotaion_dataset.lock().unwrap());
-        next_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.lock().unwrap().clone(), focus_scale.as_ref(), image_ui.as_ref());
+        save_annotation(&dataset);
+        next_image(current_z_stack_index.clone().as_ref(), &dataset, focus_scale.as_ref(), image_ui.as_ref());
     }));
 
     let skip_focus = SimpleAction::new("skip_focus", None);
     skip_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
-        next_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.lock().unwrap().clone(), focus_scale.as_ref(), image_ui.as_ref());
+        let dataset = annotaion_dataset.borrow_mut();
+        next_image(current_z_stack_index.clone().as_ref(), &dataset, focus_scale.as_ref(), image_ui.as_ref());
     }));
 
     let back_focus = SimpleAction::new("back_focus", None);
     back_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
-        previous_image(current_z_stack_index.clone().as_ref(), annotaion_dataset.lock().unwrap().clone(), focus_scale.as_ref(), image_ui.as_ref());
+        let dataset = annotaion_dataset.borrow_mut();
+        previous_image(current_z_stack_index.clone().as_ref(), &dataset, focus_scale.as_ref(), image_ui.as_ref());
     }));
 
     window.add_action(&action_toggle_neighbour);
