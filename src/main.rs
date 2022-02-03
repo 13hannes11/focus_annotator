@@ -458,33 +458,35 @@ fn build_ui(app: &Application) {
         .content(&application_vertical_widget)
         .build();
 
-    let file_chooser_action = FileChooserAction::Open;
-    let buttons = [("Open", ResponseType::Ok), ("Cancel", ResponseType::Cancel)];
-    let filter = FileFilter::new();
-    filter.add_pattern(r"*.json");
-
-    let file_chooser = Arc::new(FileChooserDialog::new(Some("Chose a data file!"), Some(&window), file_chooser_action, &buttons));
-    file_chooser.set_select_multiple(false);
-    file_chooser.set_filter(&filter);
-
-    file_chooser.connect_response(clone!(@strong annotaion_dataset => move |dialog: &FileChooserDialog, response: ResponseType| {
-        if response == ResponseType::Ok {
-            let file = dialog.file().expect("Couldn't get file");
-            eprintln!("Open");
-            let filename = file.path().expect("Couldn't get file path");
-            let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
-            
-            let mut dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
-            eprintln!("{}", contents);
-            //annotaion_dataset.lock().unwrap().clear();
-            //annotaion_dataset.lock().unwrap().append(&mut dataset);
-            // TODO: update data after loading
-        }
-        dialog.close();        
-    }));
-
-    open_button.connect_clicked(clone!(@weak window, @strong file_chooser => move |_| {
+    open_button.connect_clicked(clone!(@weak window => move |_| {
             // TODO: actually open and load data
+            
+
+            let file_chooser_action = FileChooserAction::Open;
+            let buttons = [("Open", ResponseType::Ok), ("Cancel", ResponseType::Cancel)];
+            let filter = FileFilter::new();
+            filter.add_pattern(r"*.json");
+        
+            let file_chooser = Arc::new(FileChooserDialog::new(Some("Chose a data file!"), Some(&window), file_chooser_action, &buttons));
+            file_chooser.set_select_multiple(false);
+            file_chooser.set_filter(&filter);
+        
+            file_chooser.connect_response(move |dialog: &FileChooserDialog, response: ResponseType| {
+                if response == ResponseType::Ok {
+                    let file = dialog.file().expect("Couldn't get file");
+                    eprintln!("Open");
+                    let filename = file.path().expect("Couldn't get file path");
+                    let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+                    
+                    let mut dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
+                    eprintln!("{}", contents);
+                    //annotaion_dataset.lock().unwrap().clear();
+                    //annotaion_dataset.lock().unwrap().append(&mut dataset);
+                    // TODO: update data after loading
+                }
+                dialog.close();        
+            });
+
             file_chooser.show();
 
     }));
