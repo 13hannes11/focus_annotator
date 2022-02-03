@@ -1,10 +1,16 @@
+mod state;
+mod constants;
+
+pub use crate::state::AnnotationImage;
+pub use crate::constants::MARGIN_BOTTOM;
+
+
 use std::cell::{Cell, RefCell};
 use std::sync::{Arc};
 use std::fs;
 
-use serde::{Deserialize, Serialize};
-
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
+use constants::{MARGIN_TOP, MARGIN_LEFT, MARGIN_RIGHT_SCALE_ADDITIONAL, TOGGLE_NEIGHBOURS_TEXT, TOGGLE_NEIGHBOURS_TEXT_TOGGLED, SCALE_STEP};
 use gio::SimpleAction;
 use glib::clone;
 use gtk::{gio, glib, FileChooserAction, FileChooserDialog, ResponseType};
@@ -12,60 +18,7 @@ use gtk::{
     ActionBar, Application, AspectFrame, Box, Button, FileFilter, Grid, Image, Orientation,
     PositionType, Scale, Separator, ToggleButton,
 };
-
-const MARGIN_TOP: i32 = 32;
-const MARGIN_BOTTOM: i32 = 32;
-const MARGIN_LEFT: i32 = 16;
-const MARGIN_RIGHT_SCALE_ADDITIONAL: i32 = 38;
-
-const NONE_STRING_OPTION: Option<String> = None;
-
-const TOGGLE_NEIGHBOURS_TEXT_TOGGLED: &str = "Hide Neighbours";
-const TOGGLE_NEIGHBOURS_TEXT: &str = "Show Neighbours";
-
-const SCALE_STEP: f64 = 1.0;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct AnnotationZStack {
-    images: Vec<AnnotationImage>,
-    best_index: Option<usize>,
-}
-
-impl AnnotationZStack {
-    pub fn new() -> Self {
-        AnnotationZStack {
-            images: Vec::<AnnotationImage>::new(),
-            best_index: None,
-        }
-    }
-    pub fn push(&mut self, image: AnnotationImage) -> &mut Self {
-        self.images.push(image);
-        self
-    }
-    pub fn first(self) -> Option<AnnotationImage> {
-        self.images.first().map(|x| x.clone())
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct AnnotationImage {
-    image_path: String,
-    neighbours: [Option<String>; 8],
-}
-
-impl AnnotationImage {
-    pub fn from_vec(image_path: String, neighbours: Vec<Option<String>>) -> Self {
-        let mut _neighbours = [NONE_STRING_OPTION; 8];
-        for (index, element) in (0..8).zip(neighbours.iter()) {
-            _neighbours[index] = element.clone();
-        }
-
-        AnnotationImage {
-            image_path,
-            neighbours: _neighbours,
-        }
-    }
-}
+use state::AnnotationZStack;
 
 #[derive(Debug, Clone)]
 struct ImageUI {
@@ -480,7 +433,7 @@ fn build_ui(app: &Application) {
                     
                     let mut new_dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
                     eprintln!("{}", contents);
-                    
+
                     let mut dataset = annotaion_dataset.borrow_mut();
                     dataset.clear();
                     dataset.append(&mut new_dataset);
@@ -517,7 +470,7 @@ fn build_ui(app: &Application) {
         let index = current_z_stack_index.as_ref().get();
         let mut dataset = annotaion_dataset.borrow_mut();
         dataset[index].best_index = Some(focus_scale.value() as usize);
-
+        
         save_annotation(&dataset);
         next_image(current_z_stack_index.clone().as_ref(), &dataset, focus_scale.as_ref(), image_ui.as_ref());
     }));
