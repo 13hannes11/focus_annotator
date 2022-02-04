@@ -5,9 +5,9 @@ pub use crate::state::AnnotationImage;
 pub use crate::constants::MARGIN_BOTTOM;
 
 
-use std::cell::{Cell, RefCell};
+use std::cell::{RefCell};
 use std::sync::{Arc};
-use std::fs;
+use std::{fs};
 
 use adw::{prelude::*, ApplicationWindow, HeaderBar, SplitButton};
 use constants::{MARGIN_TOP, MARGIN_LEFT, MARGIN_RIGHT_SCALE_ADDITIONAL, TOGGLE_NEIGHBOURS_TEXT, TOGGLE_NEIGHBOURS_TEXT_TOGGLED, SCALE_STEP};
@@ -18,13 +18,14 @@ use gtk::{
     ActionBar, Application, AspectFrame, Box, Button, FileFilter, Grid, Image, Orientation,
     PositionType, Scale, Separator, ToggleButton,
 };
-use state::AnnotationZStack;
+use state::{AnnotationZStack, State};
 
 #[derive(Debug, Clone)]
 struct ImageUI {
     individual: Arc<Image>,
     center: Arc<Image>,
     neighbours: [Arc<Image>; 8],
+    focus_scale: Arc<Scale>,
 }
 
 impl ImageUI {
@@ -41,14 +42,34 @@ impl ImageUI {
             Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
             Arc::new(Image::builder().vexpand(true).hexpand(true).build()),
         ];
+        let focus_scale = Arc::new(
+            Scale::builder()
+                .orientation(Orientation::Vertical)
+                .vexpand(true)
+                .margin_top(MARGIN_TOP)
+                .margin_bottom(MARGIN_BOTTOM)
+                .margin_start(MARGIN_LEFT)
+                .draw_value(true)
+                .inverted(true)
+                .round_digits(0)
+                .digits(0)
+                .build(),
+        );
 
         ImageUI {
             individual,
             center,
             neighbours,
+            focus_scale,
         }
     }
-    pub fn update_image(&self, annotation_image: &AnnotationImage) {
+    pub fn update(&self, state : &State) {
+        if let Some(annotation_image) = state.get_current_annotation_image() {
+            self.update_image(&annotation_image);
+        }
+        self.update_focus_scale(&state);
+    }
+    fn update_image(&self, annotation_image: &AnnotationImage) {
         self.individual
             .set_from_file(Some(annotation_image.image_path.clone()));
         self.center
@@ -58,90 +79,30 @@ impl ImageUI {
             self.neighbours[index].set_from_file(annotation_image.neighbours[index].clone());
         }
     }
-}
 
-fn update_focus_scale(focus_scale: &Scale, z_stack: AnnotationZStack) {
-    let max = (z_stack.images.len() - 1) as f64;
-    focus_scale.set_range(0.0, max);
-    focus_scale.set_value(f64::floor(max / 2.0));
+    fn update_focus_scale(&self, state: &State) {
+        let max = state.get_current_foucs_stack_max().unwrap_or(0) as f64;
+        self.focus_scale.set_range(0.0, max);
 
-    if z_stack.best_index.is_some() {
-        focus_scale.add_mark(
-            z_stack.best_index.unwrap() as f64,
-            PositionType::Right,
-            Some("focus"),
-        );
-        focus_scale.set_margin_end(0);
-    } else {
-        focus_scale.clear_marks();
-        focus_scale.set_margin_end(MARGIN_RIGHT_SCALE_ADDITIONAL);
+        if  let Some(best_index) = state.get_current_foucs_stack_best_index() {
+            self.focus_scale.clear_marks();
+            self.focus_scale.add_mark(
+                best_index as f64,
+                PositionType::Right,
+                Some("focus"),
+            );
+            self.focus_scale.set_margin_end(0);
+        } else {
+            self.focus_scale.clear_marks();
+            self.focus_scale.set_margin_end(MARGIN_RIGHT_SCALE_ADDITIONAL);
+        }
+
+        if let Some(current_value) = state.image_index {
+            self.focus_scale.set_value(current_value as f64);
+        } else {
+            self.focus_scale.set_value(f64::floor(max / 2.0));
+        }
     }
-}
-
-fn change_image(
-    direction: i32,
-    current_z_stack_index: &Cell<usize>,
-    annotaion_dataset: &Vec<AnnotationZStack>,
-    focus_scale: &Scale,
-    image_ui: &ImageUI,
-) {
-    let index = current_z_stack_index.get() as i32 + direction;
-
-    eprintln!("Index after {index}");
-    // Makes sure we are not overstepping bounds
-    let index = if index < annotaion_dataset.len() as i32 && index >= 0 {
-        current_z_stack_index.set(index.try_into().unwrap_or(0));
-        index as usize
-    } else {
-        current_z_stack_index.get()
-    };
-    eprintln!("Index after {index}");
-
-    let z_stack = annotaion_dataset[index].clone();
-    update_focus_scale(&focus_scale, z_stack);
-
-    let img = annotaion_dataset[index].images[focus_scale.value() as usize].clone();
-    image_ui.update_image(&img);
-}
-
-fn next_image(
-    current_z_stack_index: &Cell<usize>,
-    annotaion_dataset: &Vec<AnnotationZStack>,
-    focus_scale: &Scale,
-    image_ui: &ImageUI,
-) {
-    change_image(
-        1,
-        current_z_stack_index,
-        annotaion_dataset,
-        focus_scale,
-        image_ui,
-    );
-}
-
-fn previous_image(
-    current_z_stack_index: &Cell<usize>,
-    annotaion_dataset: &Vec<AnnotationZStack>,
-    focus_scale: &Scale,
-    image_ui: &ImageUI,
-) {
-    change_image(
-        -1,
-        current_z_stack_index,
-        annotaion_dataset,
-        focus_scale,
-        image_ui,
-    );
-}
-
-fn save_annotation(annotation_dataset: &Vec<AnnotationZStack>) {
-    // TODO: implement saving
-    eprintln!("Saving is not implemented yet!");
-    // Serialize it to a JSON string.
-    let j = serde_json::to_string(&annotation_dataset).unwrap();
-
-    // Print, write to a file, or send to an HTTP server.
-    eprintln!("{}", &j);
 }
 
 fn main() {
@@ -170,94 +131,15 @@ fn setup_shortcuts(app: &Application) {
 }
 
 fn build_ui(app: &Application) {
-    let current_z_stack_index = Arc::new(Cell::new(0));
-    let annotaion_dataset = Arc::new(RefCell::new(Vec::<AnnotationZStack>::new()));
 
-    let mut z_stack = AnnotationZStack::new();
-
-    let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_0_1200.jpg";
-    z_stack.push(AnnotationImage::from_vec(
-        path.to_string(),
-        vec![
-            None,
-            None,
-            None,
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_0_1125.jpg".to_string()),
-            None,
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_75_1125.jpg".to_string()),
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03987/I03987_X008_Y026_Z5498_75_1200.jpg".to_string()),
-            None,
-            None,
-        ],
-    ));
-
-    let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_0_1200.jpg";
-    z_stack.push(AnnotationImage::from_vec(
-        path.to_string(),
-        vec![
-            None,
-            None,
-            None,
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_0_1125.jpg".to_string()),
-            None,
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_75_1125.jpg".to_string()),
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03988/I03988_X008_Y026_Z5566_75_1200.jpg".to_string()),
-            None,
-            None,
-        ],
-    ));
-
-    let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_0_1200.jpg";
-    z_stack.push(AnnotationImage::from_vec(
-        path.to_string(),
-        vec![
-            None,
-            None,
-            None,
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_0_1125.jpg".to_string()),
-            None,
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1125.jpg".to_string()),
-            Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/31/I03989/I03989_X008_Y026_Z5703_75_1200.jpg".to_string()),
-            None,
-            None,
-        ],
-    ));
-
-    annotaion_dataset.borrow_mut().push(z_stack.clone());
-
-    {
-        let mut z_stack = AnnotationZStack::new();
-
-        z_stack.best_index = Some(0);
-
-        let path = "/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg";
-        z_stack.push(AnnotationImage::from_vec(
-            path.to_string(),
-            vec![
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),    
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),    
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),                    
-                Some("/var/home/hannes/Documents/toolbox/python/thesis/focus_metrics_test/img/30_753da05d-cd1e-45c5-8593-003323e0bb69_I00243_X013_Y003_Z4648.jpg".to_string()),
-            ],
-        ));
-
-        annotaion_dataset.borrow_mut().push(z_stack.clone());
-    }
+    let state = Arc::new(RefCell::new(State::new()));
 
     //////////////////
     // MAIN CONTENT //
     //////////////////
-
+    
     let image_ui = Arc::new(ImageUI::new());
-
-    image_ui
-        .as_ref()
-        .update_image(&z_stack.clone().first().unwrap());
+    image_ui.update(&(state.as_ref().borrow()));
 
     let focus_neighbours_grid = Arc::new(
         Grid::builder()
@@ -288,21 +170,9 @@ fn build_ui(app: &Application) {
         eprintln!("{column} {row}");
     }
 
-    let focus_scale = Arc::new(
-        Scale::builder()
-            .orientation(Orientation::Vertical)
-            .vexpand(true)
-            .margin_top(MARGIN_TOP)
-            .margin_bottom(MARGIN_BOTTOM)
-            .margin_start(MARGIN_LEFT)
-            .draw_value(true)
-            .inverted(true)
-            .round_digits(0)
-            .digits(0)
-            .build(),
-    );
+    //let focus_scale = image_ui.focus_scale.clone();
 
-    update_focus_scale(focus_scale.as_ref(), z_stack.clone());
+    // update_focus_scale(focus_scale.as_ref(), z_stack.clone());
 
     let center_content_seperator = Separator::new(Orientation::Vertical);
     let center_content = Box::builder()
@@ -311,14 +181,14 @@ fn build_ui(app: &Application) {
         .spacing(0)
         .build();
 
-    center_content.append(focus_scale.as_ref());
+    center_content.append(image_ui.focus_scale.as_ref());
     center_content.append(&center_content_seperator);
     center_content.append(&focus_neighbours_aspect_frame);
 
-    focus_scale.connect_value_changed(clone!(@strong image_ui, @strong z_stack => move |x| {
+    image_ui.focus_scale.connect_value_changed(clone!(@strong image_ui, @strong state => move |x| {
         let index = x.value() as usize;
-        let img = z_stack.images[index].clone();
-        image_ui.update_image(&img);
+        state.borrow_mut().set_image_index(Some(index));
+        image_ui.update(&state.borrow());
     }));
 
     ////////////
@@ -411,7 +281,7 @@ fn build_ui(app: &Application) {
         .content(&application_vertical_widget)
         .build();
 
-    open_button.connect_clicked(clone!(@weak window, @weak annotaion_dataset => move |_| {
+    open_button.connect_clicked(clone!(@weak window, @strong image_ui, @strong state => move |_| {
             // TODO: actually open and load data
             
 
@@ -424,19 +294,19 @@ fn build_ui(app: &Application) {
             file_chooser.set_select_multiple(false);
             file_chooser.set_filter(&filter);
         
-            file_chooser.connect_response(clone!(@weak window, @weak annotaion_dataset => move |dialog: &FileChooserDialog, response: ResponseType| {
+            file_chooser.connect_response(clone!(@weak window, @strong image_ui, @weak state => move |dialog: &FileChooserDialog, response: ResponseType| {
                 if response == ResponseType::Ok {
                     let file = dialog.file().expect("Couldn't get file");
                     eprintln!("Open");
                     let filename = file.path().expect("Couldn't get file path");
                     let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
-                    
-                    let mut new_dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
                     eprintln!("{}", contents);
 
-                    let mut dataset = annotaion_dataset.borrow_mut();
-                    dataset.clear();
-                    dataset.append(&mut new_dataset);
+                    let new_dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
+                    let mut state = state.borrow_mut();
+                    
+                    state.replace_foucs_stacks(new_dataset);
+                    image_ui.update(&state);
                 }
                 dialog.close();        
             }));
@@ -455,36 +325,37 @@ fn build_ui(app: &Application) {
     }));
 
     let action_focus_scale_increment = SimpleAction::new("increment_focus_scale", None);
-    action_focus_scale_increment.connect_activate(clone!(@strong focus_scale => move |_, _| {
-        focus_scale.set_value(focus_scale.value() + SCALE_STEP);
+    action_focus_scale_increment.connect_activate(clone!(@strong image_ui => move |_, _| {
+        image_ui.focus_scale.set_value(image_ui.focus_scale.value() + SCALE_STEP);
     }));
 
     let action_focus_scale_decrement = SimpleAction::new("decrement_focus_scale", None);
-    action_focus_scale_decrement.connect_activate(clone!(@strong focus_scale => move |_, _| {
-        focus_scale.set_value(focus_scale.value() - SCALE_STEP);
+    action_focus_scale_decrement.connect_activate(clone!(@strong image_ui => move |_, _| {
+        image_ui.focus_scale.set_value(image_ui.focus_scale.value() - SCALE_STEP);
     }));
 
     let mark_focus = SimpleAction::new("mark_focus", None);
-    mark_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
+    mark_focus.connect_activate(clone!(@strong image_ui, @strong state => move |_, _| {
         eprintln! {"Focus Set!"};
-        let index = current_z_stack_index.as_ref().get();
-        let mut dataset = annotaion_dataset.borrow_mut();
-        dataset[index].best_index = Some(focus_scale.value() as usize);
-        
-        save_annotation(&dataset);
-        next_image(current_z_stack_index.clone().as_ref(), &dataset, focus_scale.as_ref(), image_ui.as_ref());
+
+        let mut state = state.borrow_mut();
+        state.mark_focus();
+        state.skip();
+        image_ui.update(&state);
     }));
 
     let skip_focus = SimpleAction::new("skip_focus", None);
-    skip_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
-        let dataset = annotaion_dataset.borrow_mut();
-        next_image(current_z_stack_index.clone().as_ref(), &dataset, focus_scale.as_ref(), image_ui.as_ref());
+    skip_focus.connect_activate(clone!(@strong image_ui, @strong state => move |_, _| {
+        let mut state = state.borrow_mut();
+        state.skip();
+        image_ui.update(&state);
     }));
 
     let back_focus = SimpleAction::new("back_focus", None);
-    back_focus.connect_activate(clone!(@strong image_ui, @strong focus_scale, @strong current_z_stack_index, @strong annotaion_dataset => move |_, _| {
-        let dataset = annotaion_dataset.borrow_mut();
-        previous_image(current_z_stack_index.clone().as_ref(), &dataset, focus_scale.as_ref(), image_ui.as_ref());
+    back_focus.connect_activate(clone!(@strong image_ui, @strong state => move |_, _| {
+        let mut state = state.borrow_mut();
+        state.previous();
+        image_ui.update(&state);
     }));
 
     window.add_action(&action_toggle_neighbour);
