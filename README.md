@@ -86,9 +86,11 @@ The json file contains a list of unamed objets. Each object corresponds to one f
 
 Each individual image has an `image_path` (mandatory), and **8** (!) `neighbours` (which are allowed to be set to `null`). Neighbours are represented indexed the following way:
 
+```
 0 1 2
 3 - 4
 5 6 7
+```
 
 
 You are allowed to store additional data in focus stack objects (and image objects) and this should be preserved when using the tool, however, make sure to back up the metadata file before using the tool.
