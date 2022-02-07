@@ -1,6 +1,9 @@
-# Focus-Annotator
+# Focus Annotator
 
-Focus-Annotator is a tool for annotation the focal plane of a part of an image. It is a tool I built in rust as part of my master's thesis to make image focus annotations for z-stack images quicker.
+Focus Annotator is a tool for annotation the focal plane of a part of an image. It is a tool I built in rust as part of my master's thesis to make image focus annotations for z-stack images quicker.
+
+![image](https://user-images.githubusercontent.com/9381167/152766149-18ac6194-5586-4434-8a63-70b46496bb37.png)
+
 
 
 ## Installation
