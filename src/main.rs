@@ -106,13 +106,20 @@ fn build_ui(app: &Application) {
                     let file = dialog.file().expect("Couldn't get file");
                     eprintln!("Open");
                     let filename = file.path().expect("Couldn't get file path");
-                    let contents = fs::read_to_string(filename).expect("Something went wrong reading the file");
+                    let contents = fs::read_to_string(filename.clone()).expect("Something went wrong reading the file");
                     eprintln!("{}", contents);
 
                     let new_dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
                     let mut state = state.borrow_mut();
                     
                     state.replace_foucs_stacks(new_dataset);
+                    state.save_path = Some(
+                        filename.clone().as_path()
+                        .to_str()
+                        .expect("failed to convert filname to str")
+                        .to_string()
+                    );
+                    eprintln!("{}", state.save_path.clone().unwrap());
                     image_ui.update(&state);
                 }
                 dialog.close();        
@@ -147,6 +154,7 @@ fn build_ui(app: &Application) {
 
         let mut state = state.borrow_mut();
         state.mark_focus();
+        state.save();
         state.skip();
         image_ui.update(&state);
     }));

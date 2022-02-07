@@ -1,4 +1,8 @@
+use std::io::Write;
+use std::{collections::HashMap, fs::File};
+
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::constants::NONE_STRING_OPTION;
 #[derive(Debug, Clone)]
@@ -6,6 +10,7 @@ pub struct State {
     stacks: Vec<AnnotationZStack>,
     stack_index: Option<usize>,
     pub image_index: Option<usize>,
+    pub save_path: Option<String>,
 }
 
 impl State {
@@ -14,6 +19,7 @@ impl State {
             stacks: Vec::new(),
             stack_index: None,
             image_index: None,
+            save_path: None,
         }
     }
     pub fn set_image_index(&mut self, image_index: Option<usize>) {
@@ -86,6 +92,29 @@ impl State {
         }
     }
 
+    pub fn save(&self) {
+        if let Some(path) = self.save_path.clone() {
+            match File::create(path) {
+                Ok(mut file) => {
+                    let contents =
+                        serde_json::to_string(&self.stacks).expect("Could not serialize data.");
+                    match file.write(contents.as_bytes()) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            eprintln!("an error occured while saving: {}", e.to_string());
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{}", e.to_string());
+                }
+            };
+        } else {
+            // TODO: error dialogue
+            eprintln!("No save path specified");
+        }
+    }
+
     pub fn previous(&mut self) {
         let len = self.stacks.len();
         if len == 0 {
@@ -100,12 +129,18 @@ impl State {
 pub struct AnnotationZStack {
     pub images: Vec<AnnotationImage>,
     pub best_index: Option<usize>,
+
+    #[serde(flatten)]
+    extra: HashMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnnotationImage {
     pub image_path: String,
     pub neighbours: [Option<String>; 8],
+
+    #[serde(flatten)]
+    extra: HashMap<String, Value>,
 }
 
 impl AnnotationImage {
@@ -118,6 +153,7 @@ impl AnnotationImage {
         AnnotationImage {
             image_path,
             neighbours: _neighbours,
+            extra: HashMap::new(),
         }
     }
 }
