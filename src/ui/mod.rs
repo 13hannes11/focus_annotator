@@ -60,7 +60,7 @@ impl ImageUI {
 
     fn build_header(builder: &mut ImageUIBuilder, application_vertical_widget: Arc<Box>) {
         let header_bar = HeaderBar::builder()
-            .title_widget(&adw::WindowTitle::new("First App", ""))
+            .title_widget(&adw::WindowTitle::new("Focus Annotator", ""))
             .build();
 
         // TODO: add button functionality
