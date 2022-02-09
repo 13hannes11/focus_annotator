@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::path::Path;
 use std::{collections::HashMap, fs::File};
 
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,8 @@ pub struct State {
     stacks: Vec<AnnotationZStack>,
     stack_index: Option<usize>,
     pub image_index: Option<usize>,
-    pub save_path: Option<String>,
+    pub file_name: Option<String>,
+    pub root_path: Option<String>,
 }
 
 impl State {
@@ -19,7 +21,8 @@ impl State {
             stacks: Vec::new(),
             stack_index: None,
             image_index: None,
-            save_path: None,
+            file_name: None,
+            root_path: None,
         }
     }
     pub fn set_image_index(&mut self, image_index: Option<usize>) {
@@ -93,25 +96,29 @@ impl State {
     }
 
     pub fn save(&self) {
-        if let Some(path) = self.save_path.clone() {
-            match File::create(path) {
-                Ok(mut file) => {
-                    let contents =
-                        serde_json::to_string(&self.stacks).expect("Could not serialize data.");
-                    match file.write(contents.as_bytes()) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            eprintln!("an error occured while saving: {}", e.to_string());
+        match (self.root_path.clone(), self.file_name.clone()) {
+            (Some(root_path), Some(file_name)) => {
+                let path = Path::new(&root_path).join(Path::new(&file_name));
+                match File::create(path) {
+                    Ok(mut file) => {
+                        let contents =
+                            serde_json::to_string(&self.stacks).expect("Could not serialize data.");
+                        match file.write(contents.as_bytes()) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                eprintln!("an error occured while saving: {}", e.to_string());
+                            }
                         }
                     }
-                }
-                Err(e) => {
-                    eprintln!("{}", e.to_string());
-                }
-            };
-        } else {
-            // TODO: error dialogue
-            eprintln!("No save path specified");
+                    Err(e) => {
+                        eprintln!("{}", e.to_string());
+                    }
+                };
+            }
+            (_, _) => {
+                // TODO: error dialogue
+                eprintln!("No save path specified");
+            }
         }
     }
 

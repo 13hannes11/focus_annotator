@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use adw::{Application, ApplicationWindow, HeaderBar, SplitButton};
 use gtk::{
@@ -196,19 +196,31 @@ impl ImageUI {
     }
 
     pub fn update(&self, state: &State) {
-        if let Some(annotation_image) = state.get_current_annotation_image() {
-            self.update_image(&annotation_image);
+        match (
+            state.get_current_annotation_image(),
+            state.root_path.clone(),
+        ) {
+            (Some(annotation_image), Some(base_path)) => {
+                self.update_image(&annotation_image, base_path)
+            }
+            (_, _) => {}
         }
         self.update_focus_scale(&state);
     }
-    fn update_image(&self, annotation_image: &AnnotationImage) {
-        self.individual
-            .set_from_file(Some(annotation_image.image_path.clone()));
-        self.center
-            .set_from_file(Some(annotation_image.image_path.clone()));
+    fn update_image(&self, annotation_image: &AnnotationImage, base_path: String) {
+        self.individual.set_from_file(Some(
+            Path::new(&base_path).join(Path::new(&annotation_image.image_path)),
+        ));
+        self.center.set_from_file(Some(
+            Path::new(&base_path).join(Path::new(&annotation_image.image_path)),
+        ));
 
         for index in 0..annotation_image.neighbours.len() {
-            self.neighbours[index].set_from_file(annotation_image.neighbours[index].clone());
+            self.neighbours[index].set_from_file(
+                annotation_image.neighbours[index]
+                    .clone()
+                    .map(|x| Path::new(&base_path).join(Path::new(&x))),
+            );
         }
     }
 

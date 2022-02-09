@@ -13,6 +13,7 @@ pub use crate::ui::ImageUI;
 
 use std::cell::{RefCell};
 use std::fs;
+use std::path::Path;
 use std::sync::{Arc};
 
 use adw::{prelude::*, Application};
@@ -113,13 +114,20 @@ fn build_ui(app: &Application) {
                     let mut state = state.borrow_mut();
                     
                     state.replace_foucs_stacks(new_dataset);
-                    state.save_path = Some(
-                        filename.clone().as_path()
-                        .to_str()
-                        .expect("failed to convert filname to str")
-                        .to_string()
-                    );
-                    eprintln!("{}", state.save_path.clone().unwrap());
+                    state.file_name = filename.clone().as_path().file_name().map(|x| x.to_str().expect("failed to convert filname to str").to_string());
+                    state.root_path = filename.clone().as_path().parent().map(|x| x.to_str().expect("failed to convert filname to str").to_string());
+
+                    match (state.root_path.clone(), state.file_name.clone()) {
+                        (Some(root_path), Some(file_name)) => {
+                            let path = Path::new(&root_path).join(Path::new(&file_name));
+                            eprintln!("{:?}", path);
+                        }
+                        (_,_) => {
+                            eprintln!("Path not properly set");
+                        }
+                    }
+                    
+                    
                     image_ui.update(&state);
                 }
                 dialog.close();        
