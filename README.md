@@ -8,11 +8,11 @@ Focus Annotator is a tool for annotation the focal plane of a part of an image. 
 
 ## Installation
 
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
+Currently the application can only be optained by compiling from source
 
-```bash
-pip install foobar
-```
+## Compilation Instructions
+
+To compile and run this tool gtk and libadwaita are needed. More detailed instructions are planned for the future.
 
 ## Usage
 
