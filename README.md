@@ -12,7 +12,17 @@ Currently the application can only be optained by compiling from source
 
 ## Compilation Instructions
 
-To compile and run this tool gtk and libadwaita are needed. More detailed instructions are planned for the future.
+The prerequisits can be installed as described in the gtk4-rs book:
+
+* [Linux](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation_linux.html)
+* [Windows](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation_windows.html) (untested)
+* [Mac OS](https://gtk-rs.org/gtk4-rs/stable/latest/book/installation_macos.html) (untested)
+
+After the prerequisits are installed you can run/build the tool as is usual for rust:
+
+```
+cargo run
+```
 
 ## Usage
 
