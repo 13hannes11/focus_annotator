@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::{collections::HashMap, time::Instant};
 
 use gtk::{gio::File, prelude::FileExt};
 use serde::{Deserialize, Serialize};
@@ -57,33 +57,7 @@ impl State {
     pub fn update(&mut self, msg: &Message) {
         match msg {
             Message::OpenFile(file) => {
-                let filename = file.path().expect("Couldn't get file path");
-                let contents = fs::read_to_string(filename.clone())
-                    .expect("Something went wrong reading the file");
-                //eprintln!("{}", contents);
-
-                let new_dataset: Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
-                self.replace_foucs_stacks(new_dataset);
-                self.file_name = filename.clone().as_path().file_name().map(|x| {
-                    x.to_str()
-                        .expect("failed to convert filname to str")
-                        .to_string()
-                });
-                self.root_path = filename.clone().as_path().parent().map(|x| {
-                    x.to_str()
-                        .expect("failed to convert filname to str")
-                        .to_string()
-                });
-
-                match (self.root_path.clone(), self.file_name.clone()) {
-                    (Some(root_path), Some(file_name)) => {
-                        let path = Path::new(&root_path).join(Path::new(&file_name));
-                        eprintln!("{:?}", path);
-                    }
-                    (_, _) => {
-                        eprintln!("Path not properly set");
-                    }
-                }
+                self.open(file);
             }
             Message::NextImage => {
                 self.skip();
@@ -173,18 +147,53 @@ impl State {
         }
     }
 
+    pub fn open(&mut self, file: &File) {
+        let filename = file.path().expect("Couldn't get file path");
+        let now = Instant::now();
+        let contents =
+            fs::read_to_string(filename.clone()).expect("Something went wrong reading the file");
+        let elapsed = now.elapsed();
+        println!("Loading file: {:.2?}", elapsed);
+
+        let now = Instant::now();
+        let new_dataset: Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
+        let elapsed = now.elapsed();
+        println!("Deserialisation file: {:.2?}", elapsed);
+
+        self.replace_foucs_stacks(new_dataset);
+        self.file_name = filename.clone().as_path().file_name().map(|x| {
+            x.to_str()
+                .expect("failed to convert filname to str")
+                .to_string()
+        });
+        self.root_path = filename.clone().as_path().parent().map(|x| {
+            x.to_str()
+                .expect("failed to convert filname to str")
+                .to_string()
+        });
+
+        match (self.root_path.clone(), self.file_name.clone()) {
+            (Some(root_path), Some(file_name)) => {
+                let path = Path::new(&root_path).join(Path::new(&file_name));
+                eprintln!("{:?}", path);
+            }
+            (_, _) => {
+                eprintln!("Path not properly set");
+            }
+        }
+    }
+
     pub fn save(&self) {
         match (self.root_path.clone(), self.file_name.clone()) {
             (Some(root_path), Some(file_name)) => {
                 let path = Path::new(&root_path).join(Path::new(&file_name));
                 match fs::File::create(path) {
                     Ok(mut file) => {
-                        use std::time::Instant;
                         let now = Instant::now();
                         let contents =
                             serde_json::to_string(&self.stacks).expect("Could not serialize data.");
                         let elapsed = now.elapsed();
-                        println!("Elapsed: {:.2?}", elapsed);
+                        println!("Serialization: {:.2?}", elapsed);
 
                         let now = Instant::now();
                         match file.write(contents.as_bytes()) {
@@ -194,7 +203,7 @@ impl State {
                             }
                         }
                         let elapsed = now.elapsed();
-                        println!("Elapsed: {:.2?}", elapsed);
+                        println!("Writing to file: {:.2?}", elapsed);
                     }
                     Err(e) => {
                         eprintln!("{}", e.to_string());
