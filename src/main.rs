@@ -1,28 +1,19 @@
 #[macro_use]
 extern crate derive_builder;
 
+mod constants;
 mod state;
 mod ui;
-mod constants;
 
-pub use crate::state::AnnotationImage;
 pub use crate::constants::MARGIN_BOTTOM;
-use crate::state::AnnotationZStack;
+pub use crate::state::AnnotationImage;
 pub use crate::ui::ImageUI;
 
-
-use std::cell::{RefCell};
-use std::fs;
-use std::path::Path;
-use std::sync::{Arc};
-
 use adw::{prelude::*, Application};
-use constants::{TOGGLE_NEIGHBOURS_TEXT_TOGGLED, TOGGLE_NEIGHBOURS_TEXT, SCALE_STEP};
-use glib::clone;
 use gtk::gio::SimpleAction;
-use gtk::{glib, FileChooserDialog, FileChooserAction, ResponseType, FileFilter};
+use gtk::glib::{MainContext, PRIORITY_DEFAULT};
 
-use state::{State};
+use state::{Message, State, UIMessage};
 
 fn main() {
     let application = Application::builder()
@@ -39,147 +30,100 @@ fn main() {
     application.run();
 }
 
-
 fn build_ui(app: &Application) {
+    let (sender, receiver) = MainContext::channel(PRIORITY_DEFAULT);
 
-    let state = Arc::new(RefCell::new(State::new()));
+    let mut state = State::new();
+    let image_ui = ImageUI::new(app, sender.clone());
 
     //////////////////
     // MAIN CONTENT //
     //////////////////
-    
-    let image_ui = Arc::new(ImageUI::new(app));
+
     //image_ui.build_ui();
 
-    image_ui.focus_scale.connect_value_changed(clone!(@strong image_ui, @strong state => move |x| {
+    let _sender = sender.clone();
+    image_ui.focus_scale.connect_value_changed(move |x| {
         let index = x.value() as usize;
-        state.borrow_mut().set_image_index(Some(index));
-        image_ui.update(&state.borrow());
-    }));
+        _sender.send(Message::FocusLevelChange(index)).unwrap();
+    });
 
     ////////////////////
     // BOTTOM TOOLBAR //
     ///////////////////
     image_ui.back_button.connect_clicked(|button| {
-        button.activate_action("win.back_focus", None)
-        .expect("The action does not exist.");
+        button
+            .activate_action("win.back_focus", None)
+            .expect("The action does not exist.");
     });
 
     image_ui.skip_button.connect_clicked(|button| {
-        button.activate_action("win.skip_focus", None)
-        .expect("The action does not exist.");
+        button
+            .activate_action("win.skip_focus", None)
+            .expect("The action does not exist.");
     });
 
     image_ui.focus_button.connect_clicked(|button| {
-        button.activate_action("win.mark_focus", None)
-        .expect("The action does not exist.");
+        button
+            .activate_action("win.mark_focus", None)
+            .expect("The action does not exist.");
     });
 
-    let focus_image = image_ui.individual.clone();
-    image_ui.neighbour_toggle_button.connect_toggled(
-        clone!(@strong image_ui => move |x| match x.is_active() {
-            true => {
-                image_ui.focus_neighbours_aspect_frame.set_child(Some(image_ui.focus_neighbours_grid.as_ref()));
-                x.set_label(TOGGLE_NEIGHBOURS_TEXT_TOGGLED);
-            }
-            false => {
-                image_ui.focus_neighbours_aspect_frame.set_child(Some(focus_image.as_ref()));
-                x.set_label(TOGGLE_NEIGHBOURS_TEXT);
-            }
-        }),
-    );
+    let _sender = sender.clone();
+    image_ui.neighbour_toggle_button.connect_toggled(move |x| {
+        _sender
+            .send(Message::UI(UIMessage::ShowGrid(x.is_active())))
+            .unwrap();
+    });
 
-    image_ui.open_button.connect_clicked(clone!(@strong image_ui, @strong state => move |_| {
-            // TODO: actually open and load data
-            
-
-            let file_chooser_action = FileChooserAction::Open;
-            let buttons = [("Open", ResponseType::Ok), ("Cancel", ResponseType::Cancel)];
-            let filter = FileFilter::new();
-            filter.add_pattern(r"*.json");
-        
-            let file_chooser = Arc::new(FileChooserDialog::new(Some("Chose a data file!"), Some(image_ui.window.as_ref()), file_chooser_action, &buttons));
-            file_chooser.set_select_multiple(false);
-            file_chooser.set_filter(&filter);
-        
-            file_chooser.connect_response(clone!(@strong image_ui, @weak state => move |dialog: &FileChooserDialog, response: ResponseType| {
-                if response == ResponseType::Ok {
-                    let file = dialog.file().expect("Couldn't get file");
-                    eprintln!("Open");
-                    let filename = file.path().expect("Couldn't get file path");
-                    let contents = fs::read_to_string(filename.clone()).expect("Something went wrong reading the file");
-                    eprintln!("{}", contents);
-
-                    let new_dataset : Vec<AnnotationZStack> = serde_json::from_str(&contents).unwrap();
-                    let mut state = state.borrow_mut();
-                    
-                    state.replace_foucs_stacks(new_dataset);
-                    state.file_name = filename.clone().as_path().file_name().map(|x| x.to_str().expect("failed to convert filname to str").to_string());
-                    state.root_path = filename.clone().as_path().parent().map(|x| x.to_str().expect("failed to convert filname to str").to_string());
-
-                    match (state.root_path.clone(), state.file_name.clone()) {
-                        (Some(root_path), Some(file_name)) => {
-                            let path = Path::new(&root_path).join(Path::new(&file_name));
-                            eprintln!("{:?}", path);
-                        }
-                        (_,_) => {
-                            eprintln!("Path not properly set");
-                        }
-                    }
-                    
-                    
-                    image_ui.update(&state);
-                }
-                dialog.close();        
-            }));
-
-            file_chooser.show();
-
-    }));
+    let _sender = sender.clone();
+    image_ui.open_button.connect_clicked(move |_| {
+        _sender
+            .send(Message::UI(UIMessage::OpenFileChooser))
+            .unwrap();
+    });
 
     ////////////////////////
     // Keyboard Shortcuts //
     ////////////////////////
-
+    let _sender = sender.clone();
     let action_toggle_neighbour = SimpleAction::new("toggle_neighbour", None);
-    action_toggle_neighbour.connect_activate(clone!(@strong image_ui => move |_, _| {
-        image_ui.neighbour_toggle_button.set_active(!image_ui.neighbour_toggle_button.is_active());
-    }));
+    action_toggle_neighbour
+        .connect_activate(move |_, _| _sender.send(Message::UI(UIMessage::ToggleGrid)).unwrap());
 
+    let _sender = sender.clone();
     let action_focus_scale_increment = SimpleAction::new("increment_focus_scale", None);
-    action_focus_scale_increment.connect_activate(clone!(@strong image_ui => move |_, _| {
-        image_ui.focus_scale.set_value(image_ui.focus_scale.value() + SCALE_STEP);
-    }));
+    action_focus_scale_increment.connect_activate(move |_, _| {
+        _sender
+            .send(Message::UI(UIMessage::IncrementFocus))
+            .unwrap()
+    });
 
+    let _sender = sender.clone();
     let action_focus_scale_decrement = SimpleAction::new("decrement_focus_scale", None);
-    action_focus_scale_decrement.connect_activate(clone!(@strong image_ui => move |_, _| {
-        image_ui.focus_scale.set_value(image_ui.focus_scale.value() - SCALE_STEP);
-    }));
+    action_focus_scale_decrement.connect_activate(move |_, _| {
+        _sender
+            .send(Message::UI(UIMessage::DecrementFocus))
+            .unwrap()
+    });
 
+    let _sender = sender.clone();
     let mark_focus = SimpleAction::new("mark_focus", None);
-    mark_focus.connect_activate(clone!(@strong image_ui, @strong state => move |_, _| {
-        eprintln! {"Focus Set!"};
+    mark_focus.connect_activate(move |_, _| {
+        _sender.send(Message::MarkFocus).unwrap();
+    });
 
-        let mut state = state.borrow_mut();
-        state.mark_focus();
-        state.save();
-        state.skip();
-        image_ui.update(&state);
-    }));
-
+    let _sender = sender.clone();
     let skip_focus = SimpleAction::new("skip_focus", None);
-    skip_focus.connect_activate(clone!(@strong image_ui, @strong state => move |_, _| {
-        let mut state = state.borrow_mut();
-        state.skip();
-        image_ui.update(&state);
-    }));
+    skip_focus.connect_activate(move |_, _| {
+        _sender.send(Message::NextImage).unwrap();
+    });
 
+    let _sender = sender.clone();
     let back_focus = SimpleAction::new("back_focus", None);
-    back_focus.connect_activate(clone!(@strong image_ui, @strong state => move |_, _| {
-        let mut state = state.borrow_mut();
-        state.previous();
-        image_ui.update(&state);
-    }));
+    back_focus.connect_activate(move |_, _| {
+        _sender.send(Message::PreviousImage).unwrap();
+    });
 
     image_ui.window.add_action(&action_toggle_neighbour);
     image_ui.window.add_action(&action_focus_scale_increment);
@@ -187,5 +131,12 @@ fn build_ui(app: &Application) {
     image_ui.window.add_action(&mark_focus);
     image_ui.window.add_action(&skip_focus);
     image_ui.window.add_action(&back_focus);
+
     image_ui.show();
+    receiver.attach(None, move |msg| {
+        eprintln!("Received message: {:?}", msg);
+        state.update(&msg);
+        image_ui.refresh(&msg, &state);
+        Continue(true)
+    });
 }

@@ -2,14 +2,21 @@ use std::{path::Path, sync::Arc};
 
 use adw::{Application, ApplicationWindow, HeaderBar, SplitButton};
 use gtk::{
-    traits::{BoxExt, GridExt, GtkApplicationExt, RangeExt, ScaleExt, WidgetExt},
-    ActionBar, AspectFrame, Box, Button, Grid, Image, Orientation, PositionType, Scale, Separator,
-    ToggleButton,
+    glib::Sender,
+    traits::{
+        BoxExt, ButtonExt, DialogExt, FileChooserExt, GridExt, GtkApplicationExt, GtkWindowExt,
+        RangeExt, ScaleExt, ToggleButtonExt, WidgetExt,
+    },
+    ActionBar, AspectFrame, Box, Button, FileChooserAction, FileChooserDialog, FileFilter, Grid,
+    Image, Orientation, PositionType, ResponseType, Scale, Separator, ToggleButton,
 };
 
 use crate::{
-    constants::{MARGIN_LEFT, MARGIN_RIGHT_SCALE_ADDITIONAL, MARGIN_TOP, TOGGLE_NEIGHBOURS_TEXT},
-    state::State,
+    constants::{
+        MARGIN_LEFT, MARGIN_RIGHT_SCALE_ADDITIONAL, MARGIN_TOP, SCALE_STEP, TOGGLE_NEIGHBOURS_TEXT,
+        TOGGLE_NEIGHBOURS_TEXT_TOGGLED,
+    },
+    state::{Message, State, UIMessage},
     AnnotationImage, MARGIN_BOTTOM,
 };
 
@@ -24,15 +31,16 @@ pub struct ImageUI {
     pub focus_neighbours_grid: Arc<Grid>,
     pub focus_neighbours_aspect_frame: Arc<AspectFrame>,
 
-    pub neighbour_toggle_button: Arc<ToggleButton>,
+    pub neighbour_toggle_button: ToggleButton,
     pub open_button: Arc<SplitButton>,
     pub back_button: Arc<Button>,
     pub skip_button: Arc<Button>,
     pub focus_button: Arc<Button>,
+    pub sender: Sender<Message>,
 }
 
 impl ImageUI {
-    pub fn new(app: &Application) -> ImageUI {
+    pub fn new(app: &Application, sender: Sender<Message>) -> ImageUI {
         let mut builder = ImageUIBuilder::default();
         let application_vertical_widget = Arc::new(Box::new(Orientation::Vertical, 0));
 
@@ -48,8 +56,8 @@ impl ImageUI {
 
         builder
             .application_vertical_widget(application_vertical_widget.clone())
-            .window(window);
-
+            .window(window)
+            .sender(sender);
         // TODO: move into builder
         ImageUI::build_header(&mut builder, application_vertical_widget.clone());
         ImageUI::build_center(&mut builder, application_vertical_widget.clone());
@@ -165,12 +173,10 @@ impl ImageUI {
                 .build(),
         );
 
-        let neighbour_toggle_button = Arc::new(
-            ToggleButton::builder()
-                .label(TOGGLE_NEIGHBOURS_TEXT)
-                .width_request(158)
-                .build(),
-        );
+        let neighbour_toggle_button = ToggleButton::builder()
+            .label(TOGGLE_NEIGHBOURS_TEXT)
+            .width_request(158)
+            .build();
 
         let focus_skip_link_widget = Box::builder()
             .css_classes(vec!["linked".to_string()])
@@ -179,7 +185,7 @@ impl ImageUI {
         focus_skip_link_widget.append(skip_button.as_ref());
         focus_skip_link_widget.append(focus_button.as_ref());
 
-        bottom_toolbar.pack_start(neighbour_toggle_button.as_ref());
+        bottom_toolbar.pack_start(&neighbour_toggle_button);
         bottom_toolbar.pack_end(&focus_skip_link_widget);
 
         application_vertical_widget.append(&bottom_toolbar);
@@ -195,17 +201,81 @@ impl ImageUI {
         self.window.show();
     }
 
-    pub fn update(&self, state: &State) {
-        match (
-            state.get_current_annotation_image(),
-            state.root_path.clone(),
-        ) {
-            (Some(annotation_image), Some(base_path)) => {
-                self.update_image(&annotation_image, base_path)
+    pub fn refresh(&self, msg: &Message, state: &State) {
+        match msg {
+            Message::UI(UIMessage::ToggleGrid) => {
+                let curent_state = self.neighbour_toggle_button.is_active();
+                self.neighbour_toggle_button.set_active(!curent_state)
             }
-            (_, _) => {}
+            Message::UI(UIMessage::IncrementFocus) => {
+                self.focus_scale
+                    .set_value(self.focus_scale.value() + SCALE_STEP);
+            }
+            Message::UI(UIMessage::DecrementFocus) => {
+                self.focus_scale
+                    .set_value(self.focus_scale.value() - SCALE_STEP);
+            }
+            Message::UI(UIMessage::ShowGrid(true)) => {
+                self.focus_neighbours_aspect_frame
+                    .set_child(Some(self.focus_neighbours_grid.as_ref()));
+                self.neighbour_toggle_button
+                    .set_label(TOGGLE_NEIGHBOURS_TEXT_TOGGLED);
+            }
+            Message::UI(UIMessage::ShowGrid(false)) => {
+                self.focus_neighbours_aspect_frame
+                    .set_child(Some(self.individual.as_ref()));
+                self.neighbour_toggle_button
+                    .set_label(TOGGLE_NEIGHBOURS_TEXT);
+            }
+            Message::UI(UIMessage::OpenFileChooser) => {
+                let file_chooser_action = FileChooserAction::Open;
+                let buttons = [("Open", ResponseType::Ok), ("Cancel", ResponseType::Cancel)];
+                let filter = FileFilter::new();
+                filter.add_pattern(r"*.json");
+
+                let file_chooser = FileChooserDialog::new(
+                    Some("Chose a data file!"),
+                    Some(self.window.as_ref()),
+                    file_chooser_action,
+                    &buttons,
+                );
+                file_chooser.set_select_multiple(false);
+                file_chooser.set_filter(&filter);
+
+                let _sender = self.sender.clone();
+                file_chooser.connect_response(
+                    move |dialog: &FileChooserDialog, response: ResponseType| {
+                        if response == ResponseType::Ok {
+                            let file = dialog.file().expect("Couldn't get file");
+                            eprintln!("Open");
+                            _sender.send(Message::OpenFile(file)).unwrap();
+                        }
+                        dialog.close();
+                    },
+                );
+
+                file_chooser.show();
+            }
+            Message::UI(UIMessage::RefreshImages)
+            | Message::NextImage
+            | Message::PreviousImage
+            | Message::MarkFocus
+            | Message::FocusLevelChange(_)
+            | Message::OpenFile(_) => {
+                match (
+                    state.get_current_annotation_image(),
+                    state.root_path.clone(),
+                ) {
+                    (Some(annotation_image), Some(base_path)) => {
+                        self.update_image(&annotation_image, base_path)
+                    }
+                    (_, _) => {
+                        // TODO: write error message
+                    }
+                }
+                self.update_focus_scale(&state);
+            }
         }
-        self.update_focus_scale(&state);
     }
     fn update_image(&self, annotation_image: &AnnotationImage, base_path: String) {
         self.individual.set_from_file(Some(
@@ -239,7 +309,7 @@ impl ImageUI {
                 .set_margin_end(MARGIN_RIGHT_SCALE_ADDITIONAL);
         }
 
-        if let Some(current_value) = state.image_index {
+        if let Some(current_value) = state.get_focus_image_index() {
             self.focus_scale.set_value(current_value as f64);
         } else {
             self.focus_scale.set_value(f64::floor(max / 2.0));
