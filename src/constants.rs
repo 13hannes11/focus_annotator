@@ -9,3 +9,4 @@ pub const TOGGLE_NEIGHBOURS_TEXT_TOGGLED: &str = "Hide Neighbours";
 pub const TOGGLE_NEIGHBOURS_TEXT: &str = "Show Neighbours";
 
 pub const SCALE_STEP: f64 = 1.0;
+pub const ANNOTATION_CACHE_FILE_ENDING: &str = "tmp_annotation";

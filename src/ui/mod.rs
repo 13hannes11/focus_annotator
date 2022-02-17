@@ -275,6 +275,7 @@ impl ImageUI {
                 }
                 self.update_focus_scale(&state);
             }
+            Message::Quit => {}
         }
     }
     fn update_image(&self, annotation_image: &AnnotationImage, base_path: String) {

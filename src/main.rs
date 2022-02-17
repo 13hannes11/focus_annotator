@@ -132,6 +132,11 @@ fn build_ui(app: &Application) {
     image_ui.window.add_action(&skip_focus);
     image_ui.window.add_action(&back_focus);
 
+    let _sender = sender.clone();
+    app.connect_shutdown(move |_| {
+        _sender.send(Message::Quit).unwrap();
+    });
+
     image_ui.show();
     receiver.attach(None, move |msg| {
         eprintln!("Received message: {:?}", msg);

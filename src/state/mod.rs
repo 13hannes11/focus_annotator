@@ -1,13 +1,13 @@
 use std::fs;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{collections::HashMap, time::Instant};
 
 use gtk::{gio::File, prelude::FileExt};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::constants::NONE_STRING_OPTION;
+use crate::constants::{ANNOTATION_CACHE_FILE_ENDING, NONE_STRING_OPTION};
 
 #[derive(Debug)]
 pub enum Message {
@@ -17,6 +17,7 @@ pub enum Message {
     PreviousImage,
     UI(UIMessage),
     OpenFile(File),
+    Quit,
 }
 
 // Messages that do not impact state
@@ -36,7 +37,22 @@ pub struct State {
     stack_index: Option<usize>,
     focus_image_index: Option<usize>,
     file_name: Option<String>,
+    annotation_cache: Vec<LightAnnotation>,
     pub root_path: Option<String>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LightAnnotation {
+    stack_index: usize,
+    focus_image_index: usize,
+}
+
+impl LightAnnotation {
+    pub fn new(stack_index: usize, focus_image_index: usize) -> Self {
+        LightAnnotation {
+            stack_index,
+            focus_image_index,
+        }
+    }
 }
 
 impl State {
@@ -46,6 +62,7 @@ impl State {
             stack_index: None,
             focus_image_index: None,
             file_name: None,
+            annotation_cache: Vec::new(),
             root_path: None,
         }
     }
@@ -58,6 +75,8 @@ impl State {
         match msg {
             Message::OpenFile(file) => {
                 self.open(file);
+                self.integrate_tmp_file();
+                self.delete_tmp_file();
             }
             Message::NextImage => {
                 self.skip();
@@ -67,8 +86,12 @@ impl State {
             }
             Message::MarkFocus => {
                 self.mark_focus();
-                self.save();
+                self.save_tmp();
                 self.skip();
+            }
+            Message::Quit => {
+                self.save();
+                self.delete_tmp_file();
             }
             Message::FocusLevelChange(lvl) => {
                 self.set_focus_image_index(Some(*lvl));
@@ -141,10 +164,46 @@ impl State {
     pub fn mark_focus(&mut self) {
         match (self.stack_index, self.focus_image_index) {
             (Some(stack_index), Some(_)) => {
-                self.stacks[stack_index].best_index = self.focus_image_index;
+                let best_index = self.focus_image_index;
+                self.stacks[stack_index].best_index = best_index;
+                if let Some(best_index) = best_index {
+                    self.annotation_cache
+                        .push(LightAnnotation::new(stack_index, best_index))
+                }
             }
             (_, _) => {}
         }
+    }
+    pub fn integrate_tmp_file(&mut self) {
+        self.get_file_path().map(|mut path| {
+            path.set_extension(ANNOTATION_CACHE_FILE_ENDING);
+
+            if path.exists() {
+                let contents =
+                    fs::read_to_string(path).expect("Something went wrong reading the file");
+
+                self.annotation_cache = serde_json::from_str(&contents).unwrap();
+                self.integrate_annotation_cache();
+            } else {
+                eprintln!("Tmp annotation file {:?} does not exist", path);
+            }
+        });
+    }
+    fn integrate_annotation_cache(&mut self) {
+        self.annotation_cache.iter().for_each(|annotation| {
+            self.stacks.get_mut(annotation.stack_index).map(|x| {
+                x.best_index = Some(annotation.focus_image_index);
+            });
+        });
+    }
+
+    pub fn delete_tmp_file(&mut self) {
+        self.get_file_path().map(|mut path| {
+            path.set_extension(ANNOTATION_CACHE_FILE_ENDING);
+            if path.exists() {
+                fs::remove_file(path).unwrap();
+            }
+        });
     }
 
     pub fn open(&mut self, file: &File) {
@@ -183,38 +242,55 @@ impl State {
         }
     }
 
-    pub fn save(&self) {
+    fn save_file<T: Serialize>(path: PathBuf, content: &T) {
+        match fs::File::create(path) {
+            Ok(mut file) => {
+                let now = Instant::now();
+                let contents = serde_json::to_string(content).expect("Could not serialize.");
+                let elapsed = now.elapsed();
+                println!("Serialization: {:.2?}", elapsed);
+
+                let now = Instant::now();
+                match file.write(contents.as_bytes()) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!(
+                            "an error occured while saving annotation cache: {}",
+                            e.to_string()
+                        );
+                    }
+                }
+                let elapsed = now.elapsed();
+                println!("Writing to file: {:.2?}", elapsed);
+            }
+            Err(e) => {
+                eprintln!("{}", e.to_string());
+            }
+        };
+    }
+    fn get_file_path(&self) -> Option<PathBuf> {
         match (self.root_path.clone(), self.file_name.clone()) {
             (Some(root_path), Some(file_name)) => {
-                let path = Path::new(&root_path).join(Path::new(&file_name));
-                match fs::File::create(path) {
-                    Ok(mut file) => {
-                        let now = Instant::now();
-                        let contents =
-                            serde_json::to_string(&self.stacks).expect("Could not serialize data.");
-                        let elapsed = now.elapsed();
-                        println!("Serialization: {:.2?}", elapsed);
-
-                        let now = Instant::now();
-                        match file.write(contents.as_bytes()) {
-                            Ok(_) => {}
-                            Err(e) => {
-                                eprintln!("an error occured while saving: {}", e.to_string());
-                            }
-                        }
-                        let elapsed = now.elapsed();
-                        println!("Writing to file: {:.2?}", elapsed);
-                    }
-                    Err(e) => {
-                        eprintln!("{}", e.to_string());
-                    }
-                };
+                Some(Path::new(&root_path).join(Path::new(&file_name)))
             }
             (_, _) => {
-                // TODO: error dialogue
                 eprintln!("No save path specified");
+                None
             }
         }
+    }
+
+    pub fn save_tmp(&self) {
+        self.get_file_path().map(|mut path| {
+            path.set_extension(ANNOTATION_CACHE_FILE_ENDING);
+            State::save_file(path, &self.annotation_cache);
+        });
+    }
+
+    pub fn save(&self) {
+        self.get_file_path().map(|path| {
+            State::save_file(path, &self.stacks);
+        });
     }
 
     pub fn previous(&mut self) {
