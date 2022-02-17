@@ -74,6 +74,11 @@ impl State {
     pub fn update(&mut self, msg: &Message) {
         match msg {
             Message::OpenFile(file) => {
+                if self.get_file_path() != None {
+                    // Save before opening a new file
+                    self.save();
+                    self.delete_tmp_file();
+                }
                 self.open(file);
                 self.integrate_tmp_file();
                 self.delete_tmp_file();
