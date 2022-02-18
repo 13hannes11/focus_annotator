@@ -7,8 +7,9 @@ use gtk::{
         BoxExt, ButtonExt, DialogExt, FileChooserExt, GridExt, GtkApplicationExt, GtkWindowExt,
         RangeExt, ScaleExt, ToggleButtonExt, WidgetExt,
     },
-    ActionBar, AspectFrame, Box, Button, FileChooserAction, FileChooserDialog, FileFilter, Grid,
-    Image, Orientation, PositionType, ResponseType, Scale, Separator, ToggleButton,
+    ActionBar, AspectFrame, Box, Button, CheckButton, FileChooserAction, FileChooserDialog,
+    FileFilter, Grid, Image, Orientation, PositionType, ResponseType, Scale, Separator,
+    ToggleButton,
 };
 
 use crate::{
@@ -32,6 +33,7 @@ pub struct ImageUI {
     pub focus_neighbours_aspect_frame: Arc<AspectFrame>,
 
     pub neighbour_toggle_button: ToggleButton,
+    pub skip_marked_checkbox: CheckButton,
     pub open_button: Arc<SplitButton>,
     pub back_button: Arc<Button>,
     pub skip_button: Arc<Button>,
@@ -178,6 +180,9 @@ impl ImageUI {
             .width_request(158)
             .build();
 
+        let skip_marked_checkbox = CheckButton::builder().label("skip marked").build();
+        skip_marked_checkbox.activate();
+
         let focus_skip_link_widget = Box::builder()
             .css_classes(vec!["linked".to_string()])
             .build();
@@ -186,12 +191,15 @@ impl ImageUI {
         focus_skip_link_widget.append(focus_button.as_ref());
 
         bottom_toolbar.pack_start(&neighbour_toggle_button);
+
         bottom_toolbar.pack_end(&focus_skip_link_widget);
+        bottom_toolbar.pack_end(&skip_marked_checkbox);
 
         application_vertical_widget.append(&bottom_toolbar);
 
         builder
             .neighbour_toggle_button(neighbour_toggle_button)
+            .skip_marked_checkbox(skip_marked_checkbox)
             .back_button(back_button)
             .skip_button(skip_button)
             .focus_button(focus_button);
@@ -275,7 +283,7 @@ impl ImageUI {
                 }
                 self.update_focus_scale(&state);
             }
-            Message::Quit => {}
+            Message::Quit | Message::SkipMarkedToogled(_) => {}
         }
     }
     fn update_image(&self, annotation_image: &AnnotationImage, base_path: String) {

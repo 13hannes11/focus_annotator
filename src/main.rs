@@ -92,6 +92,14 @@ fn build_ui(app: &Application) {
         .connect_activate(move |_, _| _sender.send(Message::UI(UIMessage::ToggleGrid)).unwrap());
 
     let _sender = sender.clone();
+    image_ui
+        .skip_marked_checkbox
+        .connect_toggled(move |check_button| {
+            let value = check_button.is_active();
+            _sender.send(Message::SkipMarkedToogled(value)).unwrap();
+        });
+
+    let _sender = sender.clone();
     let action_focus_scale_increment = SimpleAction::new("increment_focus_scale", None);
     action_focus_scale_increment.connect_activate(move |_, _| {
         _sender

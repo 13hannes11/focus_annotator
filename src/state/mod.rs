@@ -17,6 +17,7 @@ pub enum Message {
     PreviousImage,
     UI(UIMessage),
     OpenFile(File),
+    SkipMarkedToogled(bool),
     Quit,
 }
 
@@ -39,6 +40,7 @@ pub struct State {
     file_name: Option<String>,
     annotation_cache: Vec<LightAnnotation>,
     pub root_path: Option<String>,
+    skip_marked: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LightAnnotation {
@@ -64,6 +66,7 @@ impl State {
             file_name: None,
             annotation_cache: Vec::new(),
             root_path: None,
+            skip_marked: true,
         }
     }
 
@@ -100,6 +103,9 @@ impl State {
             }
             Message::FocusLevelChange(lvl) => {
                 self.set_focus_image_index(Some(*lvl));
+            }
+            Message::SkipMarkedToogled(value) => {
+                self.skip_marked = value.clone();
             }
             Message::UI(_) => {}
         }
@@ -159,8 +165,18 @@ impl State {
         let len = self.stacks.len();
         if len == 0 {
             self.stack_index = None;
-        } else if self.stack_index.map_or_else(|| false, |x| x + 1 < len) {
-            self.stack_index = self.stack_index.map(|x| x + 1)
+        } else {
+            loop {
+                if self.stack_index.map_or_else(|| false, |x| x + 1 < len) {
+                    self.stack_index = self.stack_index.map(|x| x + 1)
+                } else {
+                    break;
+                }
+
+                if !self.skip_marked || self.get_current_foucs_stack_best_index() == None {
+                    break;
+                }
+            }
         }
 
         eprintln!("{:?}", self.stack_index)
