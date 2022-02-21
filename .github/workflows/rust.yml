@@ -15,5 +15,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: ls
+      run: ls
     - name: Build
       run: docker-compose up
