@@ -1,4 +1,4 @@
-name: Rust
+name: Build and publish
 
 on:
   push:
@@ -37,8 +37,13 @@ jobs:
   publish:
     needs: [build, build-windows]
     runs-on: ubuntu-latest
-    # if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
     - uses: actions/download-artifact@v2
-    - name: Display structure of downloaded files
-      run: ls
+    - uses: "marvinpinto/action-automatic-releases@v1.2.1"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        prerelease: false
+        files: |
+          *.AppImage
+          *.zip
