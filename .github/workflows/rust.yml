@@ -25,4 +25,9 @@ jobs:
         path: |
           '**.AppImage'
           '**.zip'
-        
+    - name: ls
+      run: ls
+
+    - name: pwd
+      run: pwd
+      
