@@ -23,8 +23,8 @@ jobs:
       with:
         name: executables
         path: |
-          '**.AppImage'
-          '**.zip'
+          *.AppImage
+          *.zip
     - name: ls
       run: ls
 
