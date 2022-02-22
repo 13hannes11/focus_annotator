@@ -10,9 +10,8 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    
     steps:
     - uses: actions/checkout@v2
     - name: Build
@@ -24,6 +23,6 @@ jobs:
       with:
         name: executables
         path: |
-          '*.AppImage'
-          '*.zip'
+          '**.AppImage'
+          '**.zip'
         
