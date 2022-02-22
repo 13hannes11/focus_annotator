@@ -4,5 +4,5 @@ services:
     image: mglolenstine/gtk4-cross:rust-gtk-4.6
     volumes:
       - .:/mnt:z
-    command: bash -c "build && package"
+    command: bash -c "build && package_with_icons"
 
