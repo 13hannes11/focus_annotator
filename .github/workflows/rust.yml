@@ -17,5 +17,13 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build
       run: docker-compose up
-    - name: ls
-      run: ls
+    - name: Build (Windows)
+      run: docker-compose -f docker-compose.windows.yml up
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2.3.1
+      with:
+        name: executables
+        path: |
+          '*.AppImage'
+          '*.zip'
+        
