@@ -8,7 +8,7 @@ Focus Annotator is a tool for annotation the focal plane of a part of an image. 
 
 ## Installation
 
-Currently the application can only be optained by compiling from source.
+You can either download the latest release [here](https://github.com/13hannes11/focus_annotator/releases) or compile from source.
 
 ## Compilation Instructions
 
@@ -16,7 +16,7 @@ Currently the application can only be optained by compiling from source.
 
 The tool can be compiled with docker-compose:
 
-* Linux Version `docker-compose up` (found in *target/release/*, dependencies are not included therefore install `libadwaita` via your distros package manager)
+* Linux Version `docker-compose up` (compiles to AppImage)
 * Windows Version: `docker-compose -f docker-compose.windows.yml up` (the resulting file is packaged as *package.zip*, dependencies included)
 
 
