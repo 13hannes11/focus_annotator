@@ -25,14 +25,17 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build (Windows)
       run: docker-compose -f docker-compose.windows.yml up
-    - name: rename windows artifact
-      run: mv package.zip windows.zip
+    - name: Make Windows Installer
+      run: ./create_windows_installer.sh
+    - name: Rename Windows Artifact
+      run: mv package.zip windows-portable.zip
     - name: Upload Artifact
       uses: actions/upload-artifact@v2.3.1
       with:
         name: executables
         path: |
           *.zip
+          *.exe
           
   publish:
     needs: [build, build-windows]
@@ -47,3 +50,4 @@ jobs:
         files: |
           **/*.AppImage
           **/*.zip
+          **/*.exe

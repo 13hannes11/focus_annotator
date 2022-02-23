@@ -1,3 +1,6 @@
 /target
-*.zip
+/Output
+/package
 /libs
+*.zip
+*.exe
