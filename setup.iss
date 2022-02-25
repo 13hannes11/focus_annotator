@@ -6,7 +6,7 @@
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{0AD7C555-49E0-47FC-A6ED-22677FD5AD28}
 AppName=Focus Annotator
-AppVersion=0.1.0
+AppVersion=0.1.1
 ;AppVerName=Focus Annotator 0.1.0
 AppPublisher=Hannes Fredrik Kuchelmeister
 AppPublisherURL=https://github.com/13hannes11/focus_annotator
