@@ -20,3 +20,8 @@ auto_link_exclude_list = [
     "libdl.so*",
     "libpthread.so*",
 ]
+
+[[bin]]
+name = "focus-annotator"
+path = "src/main.rs"
+
