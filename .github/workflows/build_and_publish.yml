@@ -27,8 +27,8 @@ jobs:
       run: docker-compose -f docker-compose.windows.yml up
     - name: Make Windows Installer
       run: ./create_windows_installer.sh
-    - name: Rename Windows Artifact
-      run: mv package.zip windows-portable.zip
+    - name: Zip Portable Windows Artifact
+      run: zip -r windows-portable.zip package
     - name: Upload Artifact
       uses: actions/upload-artifact@v2.3.1
       with:
