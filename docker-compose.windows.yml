@@ -1,8 +1,8 @@
 version: "3"
 services:
   cross:
-    image: mglolenstine/gtk4-cross:rust-gtk-4.6
+    image: ghcr.io/mglolenstine/gtk4-cross:rust-gtk-4.8
     volumes:
       - .:/mnt:z
-    command: bash -c "build && package_with_icons"
+    command: bash -c "build && package"
 
