@@ -7,4 +7,4 @@ docker cp LICENSE.md setup:/work/
 docker start -i -a setup
 docker cp setup:/work/Output/. .
 docker rm setup
-rm -r package
+# rm -r package
