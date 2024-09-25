@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: docker-compose up
+      run: docker compose up
     - name: Upload Artifact
       uses: actions/upload-artifact@v2.3.1
       with:
@@ -24,7 +24,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build (Windows)
-      run: docker-compose -f docker-compose.windows.yml up
+      run: docker compose -f docker-compose.windows.yml up
     - name: Make Windows Installer
       run: ./create_windows_installer.sh
     - name: Zip Portable Windows Artifact
