@@ -71,7 +71,7 @@ impl State {
     }
 
     pub fn get_focus_image_index(&self) -> Option<usize> {
-        return self.focus_image_index;
+        self.focus_image_index
     }
 
     pub fn update(&mut self, msg: &Message) {
@@ -105,7 +105,7 @@ impl State {
                 self.set_focus_image_index(Some(*lvl));
             }
             Message::SkipMarkedToogled(value) => {
-                self.skip_marked = value.clone();
+                self.skip_marked = *value;
             }
             Message::UI(_) => {}
         }
@@ -168,7 +168,7 @@ impl State {
         } else {
             loop {
                 if self.stack_index.map_or_else(|| false, |x| x + 1 < len) {
-                    self.stack_index = self.stack_index.map(|x| x + 1)
+                    self.stack_index = self.stack_index.map(|x| x + 1);
                 } else {
                     break;
                 }
@@ -319,7 +319,7 @@ impl State {
         if len == 0 {
             self.stack_index = None;
         } else if self.stack_index.map_or_else(|| false, |x| x > 0) {
-            self.stack_index = self.stack_index.map(|x| x - 1)
+            self.stack_index = self.stack_index.map(|x| x - 1);
         }
     }
 }

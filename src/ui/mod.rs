@@ -212,8 +212,8 @@ impl ImageUI {
     pub fn refresh(&self, msg: &Message, state: &State) {
         match msg {
             Message::UI(UIMessage::ToggleGrid) => {
-                let curent_state = self.neighbour_toggle_button.is_active();
-                self.neighbour_toggle_button.set_active(!curent_state)
+                let current_state = self.neighbour_toggle_button.is_active();
+                self.neighbour_toggle_button.set_active(!current_state)
             }
             Message::UI(UIMessage::IncrementFocus) => {
                 self.focus_scale
